@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Coins, Loader2, Shield, Timer, Trophy, Zap } from "lucide-react";
+import { Coins, Loader2, Shield, Timer, Trophy, Zap, Play, Gamepad2, Target, Sparkles, Heart, ArrowRight, ArrowLeft, X, SkipForward } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -778,171 +778,488 @@ interface RoleSelectProps {
   onStart: (role: Role, name: string) => void;
 }
 
-function RoleSelectScreen({ onStart }: RoleSelectProps) {
+  function RoleSelectScreen({ onStart }: RoleSelectProps) {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [playerName, setPlayerName] = useState("");
+  const [showTour, setShowTour] = useState(true);
+  const [tourStep, setTourStep] = useState(0);
 
   const handleStart = () => {
-    if (!selectedRole || !playerName.trim()) return;
-    onStart(selectedRole, playerName.trim());
+    if (selectedRole && playerName.trim()) {
+      onStart(selectedRole, playerName.trim());
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-game-bg flex flex-col items-center justify-center p-6">
-      <motion.div
-        initial={{ opacity: 0, y: -30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="text-center mb-10"
-      >
-        <div
-          className="text-5xl font-black tracking-tighter mb-2 text-white"
-          style={{ textShadow: "0 0 40px rgba(99,179,237,0.6)" }}
-        >
-          CHASE <span className="text-cyan-400">&amp;</span> ESCAPE
+  const tourSteps = [
+    {
+      title: "Welcome to Chase & Escape!",
+      description: "Choose your hero and complete your mission!",
+      icon: <Gamepad2 className="w-16 h-16 text-blue-400" />,
+      content: (
+        <div className="text-center space-y-4">
+          <p className="text-white text-lg">Be fast, smart, and quick to win!</p>
+          <div className="flex justify-center gap-6">
+            <div className="text-center">
+              <div className="text-2xl mb-1">🏃‍♂️</div>
+              <p className="text-blue-300">Be Fast</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl mb-1">🎯</div>
+              <p className="text-red-300">Be Smart</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl mb-1">⏱</div>
+              <p className="text-yellow-300">Be Quick</p>
+            </div>
+          </div>
         </div>
-        <p className="text-slate-400 text-sm tracking-widest uppercase">
-          Time-Based Survival Game
-        </p>
-      </motion.div>
+      )
+    },
+    {
+      title: "Game Rules",
+      description: "Master the basics to win!",
+      icon: <Sparkles className="w-16 h-16 text-yellow-400" />,
+      content: (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="flex items-center gap-3">
+              <Timer className="w-8 h-8 text-green-400" />
+              <div>
+                <p className="text-white font-semibold">90 Seconds Timer</p>
+                <p className="text-white/70 text-sm">Complete your mission before time runs out!</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Coins className="w-8 h-8 text-yellow-400" />
+              <div>
+                <p className="text-white font-semibold">15 Magic Coins</p>
+                <p className="text-white/70 text-sm">Escapers must collect all coins to win!</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Target className="w-8 h-8 text-purple-400" />
+              <div>
+                <p className="text-white font-semibold">Smart AI Opponent</p>
+                <p className="text-white/70 text-sm">Face an intelligent computer opponent!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Game Controls",
+      description: "Learn the controls to play!",
+      icon: <Heart className="w-16 h-16 text-pink-400" />,
+      content: (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+                <span className="text-white font-bold">↑↓←→</span>
+              </div>
+              <p className="text-white font-semibold">Arrow Keys</p>
+              <p className="text-white/70 text-sm">Move your character</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+                <span className="text-white font-bold text-sm">SPACE</span>
+              </div>
+              <p className="text-white font-semibold">Space Bar</p>
+              <p className="text-white/70 text-sm">Drop decoys (Escaper only)</p>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Choose Your Hero",
+      description: "Select your character and start playing!",
+      icon: <Trophy className="w-16 h-16 text-amber-400" />,
+      content: (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="text-center p-4 bg-blue-500/20 rounded-lg">
+              <div className="text-2xl mb-2">🏃‍♂️</div>
+              <p className="text-white font-bold">Escaper</p>
+              <p className="text-blue-300 text-sm">Speed Hero</p>
+              <ul className="text-white/80 text-sm mt-2 space-y-1">
+                <li>• Collect 15 coins</li>
+                <li>• Drop decoys</li>
+                <li>• Survive 90 seconds</li>
+              </ul>
+            </div>
+            <div className="text-center p-4 bg-red-500/20 rounded-lg">
+              <div className="text-2xl mb-2">🎯</div>
+              <p className="text-white font-bold">Hunter</p>
+              <p className="text-red-300 text-sm">Chase Master</p>
+              <ul className="text-white/80 text-sm mt-2 space-y-1">
+                <li>• Follow footprints</li>
+                <li>• Catch the Escaper</li>
+                <li>• Score by time</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )
+    }
+  ];
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        className="w-full max-w-2xl"
-      >
-        <Card className="bg-slate-900/80 border-slate-700/60 backdrop-blur-sm shadow-2xl">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-white text-xl">
-              Choose Your Role
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              90 seconds — survive or hunt
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 p-6">
-            {/* Role Selection */}
-            <div className="grid grid-cols-2 gap-4">
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                data-ocid="role.escaper_button"
-                onClick={() => setSelectedRole("escaper")}
-                className={`p-5 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer ${
-                  selectedRole === "escaper"
-                    ? "border-blue-500 bg-blue-500/15 shadow-lg shadow-blue-500/20"
-                    : "border-slate-700 bg-slate-800/60 hover:border-slate-600"
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                    <Zap className="w-5 h-5 text-white" />
+  const nextTourStep = () => {
+    if (tourStep < tourSteps.length - 1) {
+      setTourStep(tourStep + 1);
+    } else {
+      setShowTour(false);
+    }
+  };
+
+  const prevTourStep = () => {
+    if (tourStep > 0) {
+      setTourStep(tourStep - 1);
+    }
+  };
+
+  const skipTour = () => {
+    setShowTour(false);
+  };
+
+  if (showTour) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/50" />
+        
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          className="relative z-10 w-full max-w-2xl"
+        >
+          <Card className="bg-slate-800 border border-slate-600 shadow-2xl">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-600">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
+                    {tourSteps[tourStep].icon}
                   </div>
                   <div>
-                    <div className="font-bold text-white">Escaper</div>
-                    <Badge
-                      variant="outline"
-                      className="text-xs border-blue-500/40 text-blue-400"
-                    >
-                      Blue Team
-                    </Badge>
+                    <h2 className="text-xl font-bold text-white">
+                      {tourSteps[tourStep].title}
+                    </h2>
+                    <p className="text-slate-400 text-sm">
+                      {tourSteps[tourStep].description}
+                    </p>
                   </div>
                 </div>
-                <ul className="text-xs text-slate-400 space-y-1">
-                  <li>🪙 Collect ALL 15 coins to win instantly</li>
-                  <li>🌀 Drop decoys (5s duration) to mislead Hunter</li>
-                  <li>⏱ Or survive 90 seconds to win</li>
-                </ul>
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                data-ocid="role.hunter_button"
-                onClick={() => setSelectedRole("hunter")}
-                className={`p-5 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer ${
-                  selectedRole === "hunter"
-                    ? "border-red-500 bg-red-500/15 shadow-lg shadow-red-500/20"
-                    : "border-slate-700 bg-slate-800/60 hover:border-slate-600"
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-red-700 flex items-center justify-center shadow-lg shadow-red-500/30">
-                    <Shield className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-white">Hunter</div>
-                    <Badge
-                      variant="outline"
-                      className="text-xs border-red-500/40 text-red-400"
-                    >
-                      Red Team
-                    </Badge>
+                
+                <div className="text-right">
+                  <div className="text-lg font-bold text-blue-400">
+                    {tourStep + 1}/{tourSteps.length}
                   </div>
                 </div>
-                <ul className="text-xs text-slate-400 space-y-1">
-                  <li>👣 Follow fading footprints</li>
-                  <li>🎯 Catch the Escaper to win</li>
-                  <li>⏱ Score based on time remaining</li>
-                </ul>
-              </motion.button>
+              </div>
             </div>
-
-            {/* Name Input */}
-            <div className="space-y-2">
-              <label
-                htmlFor="player-name-input"
-                className="text-sm text-slate-400 font-medium"
-              >
-                Player Name
-              </label>
-              <Input
-                id="player-name-input"
-                data-ocid="role.name_input"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleStart();
-                }}
-                placeholder="Enter your name..."
-                maxLength={20}
-                className="bg-slate-800 border-slate-600 text-white placeholder-slate-500 focus:border-cyan-500"
-              />
+            
+            {/* Content */}
+            <div className="px-6 py-8">
+              {tourSteps[tourStep].content}
             </div>
+            
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-600">
+              {/* Progress Indicators */}
+              <div className="flex justify-center gap-2 mb-4">
+                {tourSteps.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setTourStep(index)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      index === tourStep
+                        ? "bg-blue-400 w-8"
+                        : index < tourStep
+                        ? "bg-green-400 w-2"
+                        : "bg-slate-600 w-2 hover:bg-slate-500"
+                    }`}
+                    aria-label={`Go to step ${index + 1}`}
+                  />
+                ))}
+              </div>
+              
+              {/* Navigation Buttons */}
+              <div className="flex justify-between items-center">
+                <Button
+                  variant="outline"
+                  onClick={skipTour}
+                  className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+                >
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  Skip Tour
+                </Button>
+                
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={prevTourStep}
+                    disabled={tourStep === 0}
+                    className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                  
+                  <Button
+                    onClick={nextTourStep}
+                    className="bg-blue-600 hover:bg-blue-500 text-white border-0"
+                  >
+                    {tourStep === tourSteps.length - 1 ? (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Start Playing!
+                      </>
+                    ) : (
+                      <>
+                        Next
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
 
-            {/* Start Button */}
-            <Button
-              data-ocid="role.start_button"
-              onClick={handleStart}
-              disabled={!selectedRole || !playerName.trim()}
-              className="w-full h-12 text-base font-bold bg-cyan-600 hover:bg-cyan-500 text-white border-0 disabled:opacity-40"
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 flex flex-col items-center justify-center p-4">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 left-20 w-32 h-32 bg-blue-400/10 rounded-full blur-xl animate-pulse" />
+        <div className="absolute top-40 right-32 w-24 h-24 bg-purple-400/10 rounded-full blur-xl animate-pulse delay-1000" />
+        <div className="absolute bottom-32 left-40 w-28 h-28 bg-green-400/10 rounded-full blur-xl animate-pulse delay-2000" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-6xl mx-auto">
+        {/* Main Title */}
+        <motion.div
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-8"
+        >
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Gamepad2 className="w-12 h-12 text-blue-400 animate-bounce" />
+            <div
+              className="text-6xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-green-400 bg-clip-text text-transparent"
+              style={{ textShadow: "0 0 40px rgba(59,130,246,0.3)" }}
             >
-              {selectedRole
-                ? `Start as ${selectedRole === "escaper" ? "Escaper" : "Hunter"} →`
-                : "Select a role to start"}
-            </Button>
-          </CardContent>
-        </Card>
-      </motion.div>
+              CHASE & ESCAPE
+            </div>
+            <Gamepad2 className="w-12 h-12 text-blue-400 animate-bounce delay-300" />
+          </div>
+          <p className="text-slate-300 text-lg font-medium">
+            🎮 An Exciting Adventure Game for Everyone! 🎮
+          </p>
+          
+          {/* Tour Button */}
+          <Button
+            onClick={() => setShowTour(true)}
+            variant="outline"
+            className="mt-4 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+          >
+            <Play className="w-4 h-4 mr-2" />
+            Show Tour
+          </Button>
+        </motion.div>
 
-      {/* Legend */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="mt-6 flex gap-6 text-xs text-slate-500"
-      >
-        <span className="flex items-center gap-1">
-          <Timer className="w-3 h-3" /> 90s game
-        </span>
-        <span className="flex items-center gap-1">
-          <Coins className="w-3 h-3" /> 15 coins
-        </span>
-        <span className="flex items-center gap-1">
-          <Zap className="w-3 h-3" /> AI opponent
-        </span>
-      </motion.div>
+        {/* Character Selection */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="w-full max-w-4xl mx-auto"
+        >
+          <Card className="bg-slate-800/80 backdrop-blur-md border-2 border-slate-600 shadow-2xl">
+            <CardHeader className="text-center pb-4">
+              <CardTitle className="text-2xl text-white">
+                🎭 Choose Your Character 🎭
+              </CardTitle>
+              <CardDescription className="text-slate-300 text-base">
+                Pick your hero and start your adventure!
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 p-6">
+              {/* Role Selection */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  data-ocid="role.escaper_button"
+                  onClick={() => setSelectedRole("escaper")}
+                  className={`p-6 rounded-xl border-2 text-left transition-all duration-300 cursor-pointer relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                    selectedRole === "escaper"
+                      ? "border-blue-500 bg-blue-500/20 shadow-xl shadow-blue-500/30"
+                      : "border-slate-600 bg-slate-700/50 hover:border-slate-500 hover:bg-slate-700/70"
+                  }`}
+                  aria-pressed={selectedRole === "escaper"}
+                  aria-label="Select Escaper character"
+                >
+                  {selectedRole === "escaper" && (
+                    <div className="absolute top-2 right-2">
+                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center" aria-label="Selected">
+                        <span className="text-white text-lg">✓</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/40">
+                      <Zap className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xl text-white">🏃‍♂️ Escaper</div>
+                      <Badge
+                        variant="outline"
+                        className="text-sm border-blue-400/40 text-blue-300 bg-blue-400/10"
+                      >
+                        Speed Hero
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <div className="w-6 h-6 bg-yellow-500/20 rounded flex items-center justify-center text-yellow-400 text-sm" aria-hidden="true">🪙</div>
+                      <span className="text-sm font-medium">Collect all 15 coins to WIN!</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <div className="w-6 h-6 bg-purple-500/20 rounded flex items-center justify-center text-purple-400 text-sm" aria-hidden="true">🌀</div>
+                      <span className="text-sm font-medium">Drop magic decoys (5 seconds)</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <div className="w-6 h-6 bg-green-500/20 rounded flex items-center justify-center text-green-400 text-sm" aria-hidden="true">⏱</div>
+                      <span className="text-sm font-medium">Survive 90 seconds to win</span>
+                    </div>
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  data-ocid="role.hunter_button"
+                  onClick={() => setSelectedRole("hunter")}
+                  className={`p-6 rounded-xl border-2 text-left transition-all duration-300 cursor-pointer relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                    selectedRole === "hunter"
+                      ? "border-red-500 bg-red-500/20 shadow-xl shadow-red-500/30"
+                      : "border-slate-600 bg-slate-700/50 hover:border-slate-500 hover:bg-slate-700/70"
+                  }`}
+                  aria-pressed={selectedRole === "hunter"}
+                  aria-label="Select Hunter character"
+                >
+                  {selectedRole === "hunter" && (
+                    <div className="absolute top-2 right-2">
+                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center" aria-label="Selected">
+                        <span className="text-white text-lg">✓</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/40">
+                      <Shield className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xl text-white">🎯 Hunter</div>
+                      <Badge
+                        variant="outline"
+                        className="text-sm border-red-400/40 text-red-300 bg-red-400/10"
+                      >
+                        Chase Master
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <div className="w-6 h-6 bg-cyan-500/20 rounded flex items-center justify-center text-cyan-400 text-sm" aria-hidden="true">👣</div>
+                      <span className="text-sm font-medium">Follow fading footprints</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <div className="w-6 h-6 bg-orange-500/20 rounded flex items-center justify-center text-orange-400 text-sm" aria-hidden="true">🎯</div>
+                      <span className="text-sm font-medium">Catch the Escaper to win</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <div className="w-6 h-6 bg-pink-500/20 rounded flex items-center justify-center text-pink-400 text-sm" aria-hidden="true">🏆</div>
+                      <span className="text-sm font-medium">Score based on time remaining</span>
+                    </div>
+                  </div>
+                </motion.button>
+              </div>
+
+              {/* Name Input */}
+              <div className="space-y-3">
+                <label
+                  htmlFor="player-name-input"
+                  className="text-lg text-white font-medium flex items-center gap-2"
+                >
+                  <Heart className="w-5 h-5 text-red-400" />
+                  Your Hero Name
+                </label>
+                <Input
+                  id="player-name-input"
+                  data-ocid="role.name_input"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleStart();
+                  }}
+                  placeholder="Enter your hero name..."
+                  maxLength={20}
+                  className="bg-slate-700/50 border-2 border-slate-600 text-white placeholder-slate-400 focus:border-blue-400 focus:bg-slate-700/70 text-lg h-12 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+                  aria-required="true"
+                  aria-describedby="name-help"
+                />
+                <p id="name-help" className="text-sm text-slate-400">
+                  Choose a name that represents your hero!
+                </p>
+              </div>
+
+              {/* Start Button */}
+              <Button
+                data-ocid="role.start_button"
+                onClick={handleStart}
+                disabled={!selectedRole || !playerName.trim()}
+                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white border-0 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-400/50"
+                aria-describedby="start-help"
+              >
+                {selectedRole ? (
+                  <>
+                    <Play className="w-5 h-5" />
+                    {`Start Adventure as ${selectedRole === "escaper" ? "🏃‍♂️ Escaper" : "🎯 Hunter"}!`}
+                    <Play className="w-5 h-5" />
+                  </>
+                ) : (
+                  <>
+                    <Gamepad2 className="w-5 h-5" />
+                    Choose your hero first!
+                    <Gamepad2 className="w-5 h-5" />
+                  </>
+                )}
+              </Button>
+              
+              <p id="start-help" className="text-sm text-slate-400 text-center">
+                {!selectedRole || !playerName.trim() 
+                  ? "Select a character and enter your name to begin" 
+                  : "Ready to start your adventure!"}
+              </p>
+
+              {/* Quick Tips */}
+              <div className="bg-slate-700/30 rounded-lg p-4 border border-slate-600/50">
+                <p className="text-slate-300 text-sm text-center">
+                  💡 <span className="font-medium">Pro Tip:</span> Escapers can press <kbd className="px-2 py-1 bg-slate-600 rounded text-xs">SPACE</kbd> to drop decoys!
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </div>
   );
 }
@@ -1398,17 +1715,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <footer className="fixed bottom-0 w-full text-center py-2 text-slate-600 text-xs">
-        © {new Date().getFullYear()}. Built with ❤️ using{" "}
-        <a
-          href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-          className="hover:text-slate-400 transition-colors"
-          target="_blank"
-          rel="noreferrer"
-        >
-          caffeine.ai
-        </a>
-      </footer>
     </div>
   );
 }

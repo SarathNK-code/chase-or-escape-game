@@ -48,6 +48,9 @@ const AI_SPEED = 125;
 const MAX_DECOYS = 3;
 const NUM_COINS = 15;
 const COIN_VALUE = 10;
+const BONUS_COIN_VALUE = 25; // Extra points for bonus coins
+const BONUS_COIN_INTERVAL = 8000; // Change bonus coin every 8 seconds
+const EXPLOSION_DURATION = 600; // Animation duration for coin explosions
 const AI_LAG_INTERVAL = 900;
 
 // ========================
@@ -95,6 +98,12 @@ interface Coin {
   x: number;
   y: number;
   collected: boolean;
+  isBonus: boolean;
+  explosionAnim?: {
+    startTime: number;
+    x: number;
+    y: number;
+  };
 }
 interface Decoy {
   id: number;
@@ -128,6 +137,9 @@ interface GameState {
   status: "playing" | "over";
   result: GameResult | null;
   decoyIdCounter: number;
+  bonusCoinIndex: number;
+  lastBonusCoinChange: number;
+  totalScore: number; // Track score with bonus coin points
 }
 
 // ========================
@@ -186,7 +198,12 @@ function createInitialGameState(): GameState {
   );
   const coins: Coin[] = shuffleArray(coinCandidates)
     .slice(0, NUM_COINS)
-    .map((t) => ({ x: t.x, y: t.y, collected: false }));
+    .map((t, index) => ({ 
+      x: t.x, 
+      y: t.y, 
+      collected: false,
+      isBonus: index === 0 // First coin starts as bonus
+    }));
   return {
     escaper: { pos: { ...escaperSpawn }, dir: 0 },
     hunter: { pos: { ...hunterSpawn }, dir: Math.PI },
@@ -205,6 +222,9 @@ function createInitialGameState(): GameState {
     status: "playing",
     result: null,
     decoyIdCounter: 0,
+    bonusCoinIndex: 0,
+    lastBonusCoinChange: Date.now(),
+    totalScore: 0,
   };
 }
 
@@ -245,8 +265,10 @@ function updateAIHunter(gs: GameState, dt: number): void {
   gs.hunterTargetTimer -= dt * 1000;
   if (gs.hunterTargetTimer <= 0) {
     gs.hunterTargetTimer = AI_LAG_INTERVAL;
-    if (gs.hunterDistractTimer <= 0) {
-      // Find nearest decoy that still exists
+    
+    // Random targeting logic
+    if (gs.decoys.length > 0 && Math.random() < 0.7) { // 70% chance to target decoy if available
+      // Find nearest decoy
       let nearest: Decoy | null = null;
       let nearestD = DECOY_DISTRACT_DIST;
       for (const d of gs.decoys) {
@@ -263,16 +285,34 @@ function updateAIHunter(gs: GameState, dt: number): void {
         gs.hunterTarget = { ...gs.escaper.pos };
       }
     } else {
-      // If distracted but the target decoy no longer exists, chase escaper
-      const targetIsDecoy = gs.decoys.some(
-        (d) => d.x === gs.hunterTarget.x && d.y === gs.hunterTarget.y,
-      );
-      if (!targetIsDecoy) {
-        gs.hunterDistractTimer = 0;
+      // Target escaper or random direction
+      if (Math.random() < 0.8) { // 80% chance to target escaper
         gs.hunterTarget = { ...gs.escaper.pos };
+      } else {
+        // Random movement in general direction of escaper
+        const angle = Math.atan2(
+          gs.escaper.pos.y - gs.hunter.pos.y,
+          gs.escaper.pos.x - gs.hunter.pos.x
+        ) + (Math.random() - 0.5) * Math.PI / 2;
+        gs.hunterTarget = {
+          x: gs.hunter.pos.x + Math.cos(angle) * 100,
+          y: gs.hunter.pos.y + Math.sin(angle) * 100
+        };
       }
     }
   }
+  
+  // If distracted but target decoy no longer exists, chase escaper
+  if (gs.hunterDistractTimer > 0) {
+    const targetIsDecoy = gs.decoys.some(
+      (d) => d.x === gs.hunterTarget.x && d.y === gs.hunterTarget.y,
+    );
+    if (!targetIsDecoy) {
+      gs.hunterDistractTimer = 0;
+      gs.hunterTarget = { ...gs.escaper.pos };
+    }
+  }
+  
   const dx = gs.hunterTarget.x - gs.hunter.pos.x;
   const dy = gs.hunterTarget.y - gs.hunter.pos.y;
   const d = Math.sqrt(dx * dx + dy * dy);
@@ -310,7 +350,7 @@ function updateGame(
     gs.status = "over";
     gs.result = {
       winner: "escaper",
-      score: gs.coinsCollected * COIN_VALUE,
+      score: gs.totalScore,
       coinsCollected: gs.coinsCollected,
       timeRemaining: 0,
     };
@@ -330,6 +370,15 @@ function updateGame(
   );
   // Decoy cleanup — remove expired decoys
   gs.decoys = gs.decoys.filter((d) => now - d.createdAt < DECOY_LIFESPAN);
+  
+  // Rotate bonus coin
+  if (now - gs.lastBonusCoinChange > BONUS_COIN_INTERVAL) {
+    const availableCoins = gs.coins.filter(c => !c.collected);
+    if (availableCoins.length > 0) {
+      gs.bonusCoinIndex = Math.floor(Math.random() * availableCoins.length);
+      gs.lastBonusCoinChange = now;
+    }
+  }
   // Move entities
   if (playerRole === "escaper") {
     updatePlayerMovement(gs.escaper, dt, keys, PLAYER_SPEED);
@@ -339,13 +388,27 @@ function updateGame(
     updateAIEscaper(gs, dt);
   }
   // Coin collection
-  for (const coin of gs.coins) {
-    if (
-      !coin.collected &&
-      vecDist(gs.escaper.pos, coin) < PLAYER_RADIUS + COIN_RADIUS
-    ) {
+  for (let i = 0; i < gs.coins.length; i++) {
+    const coin = gs.coins[i];
+    if (!coin.collected && vecDist(gs.escaper.pos, coin) < PLAYER_RADIUS + COIN_RADIUS) {
       coin.collected = true;
       gs.coinsCollected++;
+      
+      // Check if this was the bonus coin
+      const availableCoins = gs.coins.filter(c => !c.collected);
+      const currentBonusCoin = availableCoins[gs.bonusCoinIndex];
+      
+      if (currentBonusCoin && currentBonusCoin.x === coin.x && currentBonusCoin.y === coin.y) {
+        gs.totalScore += BONUS_COIN_VALUE;
+        // Add explosion animation
+        coin.explosionAnim = {
+          startTime: now,
+          x: coin.x,
+          y: coin.y
+        };
+      } else {
+        gs.totalScore += COIN_VALUE;
+      }
     }
   }
   // All coins collected — escaper wins!
@@ -353,7 +416,7 @@ function updateGame(
     gs.status = "over";
     gs.result = {
       winner: "escaper",
-      score: gs.coinsCollected * COIN_VALUE + Math.round(gs.timeRemaining * 5),
+      score: gs.totalScore + Math.round(gs.timeRemaining * 5),
       coinsCollected: gs.coinsCollected,
       timeRemaining: gs.timeRemaining,
     };
@@ -423,17 +486,73 @@ function renderGame(ctx: CanvasRenderingContext2D, gs: GameState): void {
   // Coins
   for (const coin of gs.coins) {
     if (!coin.collected) {
+      const availableCoins = gs.coins.filter(c => !c.collected);
+      const currentBonusCoin = availableCoins[gs.bonusCoinIndex];
+      const isCurrentBonus = currentBonusCoin && currentBonusCoin.x === coin.x && currentBonusCoin.y === coin.y;
+      
       ctx.save();
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = "#fbbf24";
-      ctx.beginPath();
-      ctx.arc(coin.x, coin.y, COIN_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = "#f59e0b";
-      ctx.fill();
-      ctx.strokeStyle = "#fde68a";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      if (isCurrentBonus) {
+        // Bonus coin - pulsing golden effect
+        const pulse = Math.sin(now * 0.006) * 0.3 + 0.7;
+        ctx.shadowBlur = 20 + pulse * 10;
+        ctx.shadowColor = "#fbbf24";
+        ctx.beginPath();
+        ctx.arc(coin.x, coin.y, COIN_RADIUS * (1 + pulse * 0.2), 0, Math.PI * 2);
+        ctx.fillStyle = "#f59e0b";
+        ctx.fill();
+        ctx.strokeStyle = "#fde68a";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Add star effect for bonus
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 10px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("★", coin.x, coin.y);
+      } else {
+        // Regular coin
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#fbbf24";
+        ctx.beginPath();
+        ctx.arc(coin.x, coin.y, COIN_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = "#f59e0b";
+        ctx.fill();
+        ctx.strokeStyle = "#fde68a";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
       ctx.restore();
+    }
+  }
+  
+  // Explosion animations
+  for (const coin of gs.coins) {
+    if (coin.explosionAnim) {
+      const age = now - coin.explosionAnim.startTime;
+      if (age < EXPLOSION_DURATION) {
+        const progress = age / EXPLOSION_DURATION;
+        const alpha = 1 - progress;
+        const radius = COIN_RADIUS + progress * 20;
+        
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(coin.explosionAnim.x, coin.explosionAnim.y, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = "#fbbf24";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        // Inner explosion
+        ctx.beginPath();
+        ctx.arc(coin.explosionAnim.x, coin.explosionAnim.y, radius * 0.6, 0, Math.PI * 2);
+        ctx.strokeStyle = "#fde68a";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        delete coin.explosionAnim;
+      }
     }
   }
   // Decoys — fade out and show shrinking timer ring
@@ -536,7 +655,7 @@ function renderGame(ctx: CanvasRenderingContext2D, gs: GameState): void {
   ctx.textAlign = "left";
   ctx.font = "bold 13px 'Courier New', monospace";
   ctx.fillStyle = "#fbbf24";
-  ctx.fillText(`SCORE: ${gs.coinsCollected * COIN_VALUE}`, 12, 15);
+  ctx.fillText(`SCORE: ${gs.totalScore}`, 12, 15);
   ctx.fillStyle = "#22d3ee";
   ctx.fillText(`DECOYS[Q]: ${gs.decoysRemaining}`, 12, 35);
   ctx.textAlign = "right";
@@ -644,7 +763,7 @@ function GameCanvas({ playerRole, onGameOver }: GameCanvasProps) {
       <div className="flex gap-6 text-xs font-mono text-slate-400">
         <span className="text-blue-400">● You (Escaper)</span>
         <span className="text-red-400">● AI Hunter</span>
-        <span className="text-yellow-400">● Coins (+10)</span>
+        <span className="text-yellow-400">● Coins (+10/★+25)</span>
         <span className="text-cyan-400">● Decoys [Q] (5s)</span>
         <span>WASD / Arrow Keys to move</span>
       </div>
@@ -960,6 +1079,12 @@ function GameOverScreen({
             >
               <Trophy className="w-3.5 h-3.5 mr-1" /> Leaderboard
             </TabsTrigger>
+            <TabsTrigger
+              value="howtoplay"
+              className="flex-1 data-[state=active]:bg-slate-700"
+            >
+              How to Play
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="result">
@@ -1112,6 +1237,72 @@ function GameOverScreen({
                 )}
                 <Button
                   data-ocid="gameover.play_again_button"
+                  onClick={onPlayAgain}
+                  className="w-full mt-4 bg-cyan-700 hover:bg-cyan-600 text-white border-0"
+                >
+                  Play Again
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="howtoplay">
+            <Card className="bg-slate-900/80 border-slate-700/60">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-white text-base">How to Play</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-cyan-400 font-semibold mb-2">🎮 Controls</h3>
+                    <ul className="text-sm text-slate-300 space-y-1">
+                      <li>• <kbd className="bg-slate-700 px-2 py-1 rounded">WASD</kbd> or <kbd className="bg-slate-700 px-2 py-1 rounded">Arrow Keys</kbd> - Move your character</li>
+                      <li>• <kbd className="bg-slate-700 px-2 py-1 rounded">Q</kbd> - Drop decoy (Escaper only)</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-blue-400 font-semibold mb-2">🏃 Escaper Role</h3>
+                    <ul className="text-sm text-slate-300 space-y-1">
+                      <li>• Collect all 15 coins to win instantly</li>
+                      <li>• Look for golden pulsing coins for bonus points (+25)</li>
+                      <li>• Drop decoys to mislead the hunter (5s duration)</li>
+                      <li>• Survive 90 seconds as an alternative win condition</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-red-400 font-semibold mb-2">🎯 Hunter Role</h3>
+                    <ul className="text-sm text-slate-300 space-y-1">
+                      <li>• Follow the blue footprints left by the escaper</li>
+                      <li>• Catch the escaper to win</li>
+                      <li>• Be aware of decoys - they can distract you</li>
+                      <li>• Score based on time remaining when you catch them</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-yellow-400 font-semibold mb-2">🪙 Scoring System</h3>
+                    <ul className="text-sm text-slate-300 space-y-1">
+                      <li>• Regular coin: 10 points</li>
+                      <li>• Bonus coin (golden with ★): 25 points</li>
+                      <li>• Hunter win: Time remaining × 10 points</li>
+                      <li>• Escaper survival bonus: Time remaining × 5 points</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-green-400 font-semibold mb-2">💡 Tips</h3>
+                    <ul className="text-sm text-slate-300 space-y-1">
+                      <li>• Use decoys strategically to create escape routes</li>
+                      <li>• The hunter AI randomly targets decoys or moves unpredictably</li>
+                      <li>• Bonus coins change position every 8 seconds</li>
+                      <li>• Plan your path to collect coins efficiently</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <Button
                   onClick={onPlayAgain}
                   className="w-full mt-4 bg-cyan-700 hover:bg-cyan-600 text-white border-0"
                 >

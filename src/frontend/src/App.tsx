@@ -657,7 +657,7 @@ function renderGame(ctx: CanvasRenderingContext2D, gs: GameState): void {
   ctx.fillStyle = "#fbbf24";
   ctx.fillText(`SCORE: ${gs.totalScore}`, 12, 15);
   ctx.fillStyle = "#22d3ee";
-  ctx.fillText(`DECOYS[Q]: ${gs.decoysRemaining}`, 12, 35);
+  ctx.fillText(`DECOYS[SPACE]: ${gs.decoysRemaining}`, 12, 35);
   ctx.textAlign = "right";
   ctx.fillStyle = "#60a5fa";
   ctx.fillText(
@@ -690,7 +690,7 @@ function GameCanvas({ playerRole, onGameOver }: GameCanvasProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       keysRef.current.add(e.key.toLowerCase());
-      if (e.key.toLowerCase() === "q" && playerRole === "escaper") {
+      if (e.key === " " && playerRole === "escaper") {
         const gs = gsRef.current;
         if (gs.decoysRemaining > 0 && gs.status === "playing") {
           gs.decoys.push({
@@ -764,7 +764,7 @@ function GameCanvas({ playerRole, onGameOver }: GameCanvasProps) {
         <span className="text-blue-400">● You (Escaper)</span>
         <span className="text-red-400">● AI Hunter</span>
         <span className="text-yellow-400">● Coins (+10/★+25)</span>
-        <span className="text-cyan-400">● Decoys [Q] (5s)</span>
+        <span className="text-cyan-400">● Decoys [SPACE] (5s)</span>
         <span>WASD / Arrow Keys to move</span>
       </div>
     </div>

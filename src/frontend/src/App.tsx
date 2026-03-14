@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Coins, Loader2, Shield, Timer, Trophy, Zap, Play, Gamepad2, Target, Sparkles, Heart, ArrowRight, ArrowLeft, X, SkipForward } from "lucide-react";
+import { Coins, Loader2, Shield, Timer, Trophy, Zap, Play, Gamepad2, Target, Sparkles, Heart, ArrowRight, ArrowLeft, X, SkipForward, BookOpen } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -54,31 +54,112 @@ const EXPLOSION_DURATION = 600; // Animation duration for coin explosions
 const AI_LAG_INTERVAL = 900;
 
 // ========================
-// MAP LAYOUT (20 x 15)
+// MAP LAYOUTS (20 x 15)
 // ========================
-const MAP: number[][] = [
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1],
-  [1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1],
-  [1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1],
-  [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1],
-  [1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1],
-  [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1],
-  [1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1],
-  [1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1],
-  [1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1],
-  [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+const MAPS: number[][][] = [
+  // Level 1 - Original balanced map
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1],
+    [1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1],
+    [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // Level 2 - Spiral maze with center arena
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1],
+    [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // Level 3 - Cross pattern with quadrants
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // Level 4 - Diamond pattern with diagonal paths
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ],
+  // Level 5 - Islands pattern with bridges
+  [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+    [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  ],
 ];
+
+// Get current map based on level
+function getCurrentMap(level: number): number[][] {
+  return MAPS[(level - 1) % MAPS.length];
+}
 
 // ========================
 // TYPES
 // ========================
 type Role = "escaper" | "hunter";
-type GamePhase = "role_select" | "playing" | "game_over";
+type GamePhase = "role_select" | "playing" | "level_transition" | "game_over";
 
 interface Vec2 {
   x: number;
@@ -134,12 +215,18 @@ interface GameState {
   escaperAIDir: Vec2;
   escaperAITimer: number;
   frameCount: number;
-  status: "playing" | "over";
+  status: "playing" | "over" | "level_complete" | "respawning";
   result: GameResult | null;
   decoyIdCounter: number;
   bonusCoinIndex: number;
   lastBonusCoinChange: number;
   totalScore: number; // Track score with bonus coin points
+  currentLevel: number;
+  totalLevels: number;
+  levelTransitionTimer: number;
+  cumulativeScore: number;
+  livesRemaining: number; // Escaper lives system
+  respawnTimer: number; // 5-second respawn timer
 }
 
 // ========================
@@ -152,12 +239,13 @@ function tileCenter(col: number, row: number): Vec2 {
   };
 }
 
-function isWall(col: number, row: number): boolean {
+function isWall(col: number, row: number, level: number = 1): boolean {
   if (col < 0 || col >= MAP_COLS || row < 0 || row >= MAP_ROWS) return true;
-  return MAP[row][col] === 1;
+  const currentMap = getCurrentMap(level);
+  return currentMap[row][col] === 1;
 }
 
-function isWallAt(x: number, y: number): boolean {
+function isWallAt(x: number, y: number, level: number = 1): boolean {
   const r = PLAYER_RADIUS - 3;
   return [
     { x: x - r, y: y - r },
@@ -165,7 +253,7 @@ function isWallAt(x: number, y: number): boolean {
     { x: x - r, y: y + r },
     { x: x + r, y: y + r },
   ].some((c) =>
-    isWall(Math.floor(c.x / TILE_SIZE), Math.floor(c.y / TILE_SIZE)),
+    isWall(Math.floor(c.x / TILE_SIZE), Math.floor(c.y / TILE_SIZE), level),
   );
 }
 
@@ -182,11 +270,12 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a;
 }
 
-function createInitialGameState(): GameState {
+function createInitialGameState(level: number = 1, totalLevels: number = 3): GameState {
+  const currentMap = getCurrentMap(level);
   const floorTiles: Vec2[] = [];
   for (let r = 0; r < MAP_ROWS; r++) {
     for (let c = 0; c < MAP_COLS; c++) {
-      if (MAP[r][c] === 0) floorTiles.push(tileCenter(c, r));
+      if (currentMap[r][c] === 0) floorTiles.push(tileCenter(c, r));
     }
   }
   const escaperSpawn = tileCenter(1, 1);
@@ -196,8 +285,16 @@ function createInitialGameState(): GameState {
       vecDist(t, escaperSpawn) > TILE_SIZE * 2.5 &&
       vecDist(t, hunterSpawn) > TILE_SIZE * 2.5,
   );
+  
+  // Level-specific difficulty adjustments
+  const levelMultiplier = 1 + (level - 1) * 0.2; // 20% harder each level
+  const adjustedNumCoins = Math.min(NUM_COINS + Math.floor((level - 1) * 2), 25); // More coins each level
+  const adjustedGameDuration = Math.max(GAME_DURATION - (level - 1) * 10, 60); // Less time each level
+  const adjustedAI_SPEED = Math.min(AI_SPEED + (level - 1) * 10, 180); // Faster AI each level
+  const adjustedMAX_DECOYS = Math.max(MAX_DECOYS - Math.floor((level - 1) * 0.5), 1); // Fewer decoys each level
+  
   const coins: Coin[] = shuffleArray(coinCandidates)
-    .slice(0, NUM_COINS)
+    .slice(0, adjustedNumCoins)
     .map((t, index) => ({ 
       x: t.x, 
       y: t.y, 
@@ -210,11 +307,11 @@ function createInitialGameState(): GameState {
     footprints: [],
     coins,
     decoys: [],
-    timeRemaining: GAME_DURATION,
+    timeRemaining: adjustedGameDuration,
     coinsCollected: 0,
-    decoysRemaining: MAX_DECOYS,
+    decoysRemaining: adjustedMAX_DECOYS,
     hunterTarget: { ...escaperSpawn },
-    hunterTargetTimer: AI_LAG_INTERVAL,
+    hunterTargetTimer: Math.max(AI_LAG_INTERVAL - (level - 1) * 100, 300), // Faster AI reaction
     hunterDistractTimer: 0,
     escaperAIDir: { x: 1, y: 0 },
     escaperAITimer: 0,
@@ -225,17 +322,23 @@ function createInitialGameState(): GameState {
     bonusCoinIndex: 0,
     lastBonusCoinChange: Date.now(),
     totalScore: 0,
+    currentLevel: level,
+    totalLevels: totalLevels,
+    levelTransitionTimer: 5,
+    cumulativeScore: 0,
+    livesRemaining: 3, // Start with 3 lives
+    respawnTimer: 0, // Initialize respawn timer
   };
 }
 
 // ========================
 // GAME LOGIC
 // ========================
-function moveEntity(entity: Entity, dx: number, dy: number): void {
+function moveEntity(entity: Entity, dx: number, dy: number, level: number = 1): void {
   const nx = entity.pos.x + dx;
   const ny = entity.pos.y + dy;
-  if (!isWallAt(nx, entity.pos.y)) entity.pos.x = nx;
-  if (!isWallAt(entity.pos.x, ny)) entity.pos.y = ny;
+  if (!isWallAt(nx, entity.pos.y, level)) entity.pos.x = nx;
+  if (!isWallAt(entity.pos.x, ny, level)) entity.pos.y = ny;
 }
 
 function updatePlayerMovement(
@@ -243,6 +346,7 @@ function updatePlayerMovement(
   dt: number,
   keys: Set<string>,
   speed: number,
+  level: number = 1,
 ): void {
   let dx = 0;
   let dy = 0;
@@ -256,49 +360,145 @@ function updatePlayerMovement(
     dx = (dx / len) * s;
     dy = (dy / len) * s;
     entity.dir = Math.atan2(dy, dx);
-    moveEntity(entity, dx, dy);
+    moveEntity(entity, dx, dy, level);
   }
 }
 
 function updateAIHunter(gs: GameState, dt: number): void {
   gs.hunterDistractTimer = Math.max(0, gs.hunterDistractTimer - dt * 1000);
   gs.hunterTargetTimer -= dt * 1000;
+  
+  // Level-specific AI speed
+  const currentAISpeed = Math.min(AI_SPEED + (gs.currentLevel - 1) * 10, 180);
+  
   if (gs.hunterTargetTimer <= 0) {
-    gs.hunterTargetTimer = AI_LAG_INTERVAL;
+    gs.hunterTargetTimer = Math.max(AI_LAG_INTERVAL - (gs.currentLevel - 1) * 100, 300);
     
-    // Random targeting logic
-    if (gs.decoys.length > 0 && Math.random() < 0.7) { // 70% chance to target decoy if available
-      // Find nearest decoy
-      let nearest: Decoy | null = null;
-      let nearestD = DECOY_DISTRACT_DIST;
-      for (const d of gs.decoys) {
-        const dd = vecDist(gs.hunter.pos, d);
-        if (dd < nearestD) {
-          nearestD = dd;
-          nearest = d;
-        }
-      }
-      if (nearest) {
-        gs.hunterTarget = { x: nearest.x, y: nearest.y };
-        gs.hunterDistractTimer = 4000;
-      } else {
-        gs.hunterTarget = { ...gs.escaper.pos };
-      }
-    } else {
-      // Target escaper or random direction
-      if (Math.random() < 0.8) { // 80% chance to target escaper
-        gs.hunterTarget = { ...gs.escaper.pos };
-      } else {
-        // Random movement in general direction of escaper
-        const angle = Math.atan2(
-          gs.escaper.pos.y - gs.hunter.pos.y,
-          gs.escaper.pos.x - gs.hunter.pos.x
-        ) + (Math.random() - 0.5) * Math.PI / 2;
-        gs.hunterTarget = {
-          x: gs.hunter.pos.x + Math.cos(angle) * 100,
-          y: gs.hunter.pos.y + Math.sin(angle) * 100
+    // Check for blocks in all directions
+    const hunterTile = {
+      col: Math.floor(gs.hunter.pos.x / TILE_SIZE),
+      row: Math.floor(gs.hunter.pos.y / TILE_SIZE)
+    };
+    const currentMap = getCurrentMap(gs.currentLevel);
+    
+    // Check if hunter is blocked in any direction
+    const blockedDirections = {
+      up: isWall(hunterTile.col, hunterTile.row - 1, gs.currentLevel),
+      down: isWall(hunterTile.col, hunterTile.row + 1, gs.currentLevel),
+      left: isWall(hunterTile.col - 1, hunterTile.row, gs.currentLevel),
+      right: isWall(hunterTile.col + 1, hunterTile.row, gs.currentLevel)
+    };
+    
+    // If hunter is blocked, immediately target escaper with aggressive pursuit
+    if (blockedDirections.up || blockedDirections.down || blockedDirections.left || blockedDirections.right) {
+      gs.hunterTarget = { ...gs.escaper.pos };
+      gs.hunterTargetTimer = 200; // Faster reaction when blocked
+      return;
+    }
+    
+    // Intelligent hunting strategies
+    const distance = vecDist(gs.hunter.pos, gs.escaper.pos);
+    
+    // Analyze escaper movement patterns
+    const recentFootprints = gs.footprints.slice(-3); // Last 3 footprints
+    let predictedPos = { ...gs.escaper.pos };
+    
+    if (recentFootprints.length >= 2) {
+      // Predict escaper's next position based on movement
+      const fp1 = recentFootprints[0];
+      const fp2 = recentFootprints[recentFootprints.length - 1];
+      const dx = fp2.x - fp1.x;
+      const dy = fp2.y - fp1.y;
+      const timeDiff = fp2.timestamp - fp1.timestamp;
+      
+      if (timeDiff > 0) {
+        const velX = (dx / timeDiff) * 1000; // pixels per second
+        const velY = (dy / timeDiff) * 1000;
+        const predictionTime = 500; // Predict 500ms ahead
+        predictedPos = {
+          x: gs.escaper.pos.x + velX * predictionTime / 1000,
+          y: gs.escaper.pos.y + velY * predictionTime / 1000
         };
       }
+    }
+    
+    // Consider decoys vs escaper priority
+    const decoyChance = Math.max(0.7 - (gs.currentLevel - 1) * 0.1, 0.3);
+    
+    if (gs.decoys.length > 0 && Math.random() < decoyChance && distance > 100) {
+      // Check if decoys are strategically placed
+      let bestDecoy: Decoy | null = null;
+      let bestDecoyScore = -Infinity;
+      
+      for (const decoy of gs.decoys) {
+        const decoyDist = vecDist(gs.hunter.pos, decoy);
+        const escaperToDecoyDist = vecDist(gs.escaper.pos, decoy);
+        
+        // Score decoys based on proximity to escaper path and distance from us
+        const score = (200 - decoyDist) + (escaperToDecoyDist * 0.3);
+        if (score > bestDecoyScore) {
+          bestDecoyScore = score;
+          bestDecoy = decoy;
+        }
+      }
+      
+      if (bestDecoy) {
+        gs.hunterTarget = { x: bestDecoy.x, y: bestDecoy.y };
+        gs.hunterDistractTimer = 3000; // Shorter distraction on higher levels
+      } else {
+        gs.hunterTarget = { ...predictedPos };
+      }
+    } else {
+      // Hunt escaper intelligently
+      
+      // Check for choke points and ambush opportunities
+      const escaperTile = {
+        col: Math.floor(gs.escaper.pos.x / TILE_SIZE),
+        row: Math.floor(gs.escaper.pos.y / TILE_SIZE)
+      };
+      
+      // Try to find interception point
+      let interceptPoint = { ...predictedPos };
+      
+      if (distance < 200) {
+        // Close range - direct pursuit with prediction
+        interceptPoint = predictedPos;
+      } else {
+        // Long range - anticipate escaper's likely path
+        const availableCoins = gs.coins.filter(c => !c.collected);
+        
+        if (availableCoins.length > 0) {
+          // Predict which coin escaper will go for
+          let targetCoin: Coin | null = null;
+          let minHeuristic = Infinity;
+          
+          for (const coin of availableCoins) {
+            const distToEscaper = vecDist(gs.escaper.pos, coin);
+            const distToHunter = vecDist(gs.hunter.pos, coin);
+            const timeForEscaper = distToEscaper / (PLAYER_SPEED * 0.88);
+            const timeForHunter = distToHunter / currentAISpeed;
+            
+            // Can we intercept?
+            if (timeForHunter < timeForEscaper * 1.2) {
+              const heuristic = distToEscaper + (distToHunter * 0.5);
+              if (heuristic < minHeuristic) {
+                minHeuristic = heuristic;
+                targetCoin = coin;
+              }
+            }
+          }
+          
+          if (targetCoin) {
+            interceptPoint = { x: targetCoin.x, y: targetCoin.y };
+          } else {
+            interceptPoint = predictedPos;
+          }
+        } else {
+          interceptPoint = predictedPos;
+        }
+      }
+      
+      gs.hunterTarget = interceptPoint;
     }
   }
   
@@ -316,25 +516,118 @@ function updateAIHunter(gs: GameState, dt: number): void {
   const dx = gs.hunterTarget.x - gs.hunter.pos.x;
   const dy = gs.hunterTarget.y - gs.hunter.pos.y;
   const d = Math.sqrt(dx * dx + dy * dy);
+  
   if (d > 2) {
-    const s = AI_SPEED * dt;
+    const s = currentAISpeed * dt;
     gs.hunter.dir = Math.atan2(dy, dx);
-    moveEntity(gs.hunter, (dx / d) * s, (dy / d) * s);
+    moveEntity(gs.hunter, (dx / d) * s, (dy / d) * s, gs.currentLevel);
   }
 }
 
 function updateAIEscaper(gs: GameState, dt: number): void {
   gs.escaperAITimer -= dt * 1000;
   if (gs.escaperAITimer <= 0) {
-    gs.escaperAITimer = 500;
+    gs.escaperAITimer = 400; // React faster on higher levels
+    
     const dx = gs.escaper.pos.x - gs.hunter.pos.x;
     const dy = gs.escaper.pos.y - gs.hunter.pos.y;
-    const angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 1.2;
-    gs.escaperAIDir = { x: Math.cos(angle), y: Math.sin(angle) };
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // Intelligent evasion strategies based on distance and situation
+    let targetAngle: number;
+    
+    if (distance < 150) {
+      // Hunter is close - aggressive evasion
+      const hunterAngle = Math.atan2(dy, dx);
+      
+      // Check available escape routes
+      const escapeRoutes: { angle: number; score: number }[] = [];
+      for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+        const testX = gs.escaper.pos.x + Math.cos(angle) * 50;
+        const testY = gs.escaper.pos.y + Math.sin(angle) * 50;
+        if (!isWallAt(testX, testY, gs.currentLevel)) {
+          const routeAngle = Math.atan2(testY - gs.hunter.pos.y, testX - gs.hunter.pos.x);
+          const angleDiff = Math.abs(routeAngle - hunterAngle);
+          escapeRoutes.push({ angle, score: angleDiff });
+        }
+      }
+      
+      if (escapeRoutes.length > 0) {
+        // Choose route that maximizes distance from hunter
+        escapeRoutes.sort((a, b) => b.score - a.score);
+        targetAngle = escapeRoutes[0].angle;
+      } else {
+        // Cornered - move directly away
+        targetAngle = hunterAngle;
+      }
+    } else if (distance < 250) {
+      // Hunter is medium distance - tactical movement
+      
+      // Consider coin positions and hunter position
+      const availableCoins = gs.coins.filter(c => !c.collected);
+      let bestCoin: Coin | null = null;
+      let bestScore = -Infinity;
+      
+      for (const coin of availableCoins) {
+        const coinDist = vecDist(gs.escaper.pos, coin);
+        const hunterToCoinDist = vecDist(gs.hunter.pos, coin);
+        
+        // Score coins based on distance from us and distance from hunter
+        const score = (200 - coinDist) - (hunterToCoinDist * 0.5);
+        if (score > bestScore) {
+          bestScore = score;
+          bestCoin = coin;
+        }
+      }
+      
+      if (bestCoin) {
+        // Move toward best coin while avoiding hunter
+        const coinAngle = Math.atan2(bestCoin.y - gs.escaper.pos.y, bestCoin.x - gs.escaper.pos.x);
+        const hunterAngle = Math.atan2(dy, dx);
+        
+        // Blend coin direction with evasion
+        targetAngle = coinAngle * 0.7 + hunterAngle * 0.3;
+      } else {
+        // No coins left, focus on evasion
+        targetAngle = Math.atan2(dy, dx) + (Math.random() - 0.5) * Math.PI / 2;
+      }
+    } else {
+      // Hunter is far - focus on coins with awareness
+      const availableCoins = gs.coins.filter(c => !c.collected);
+      if (availableCoins.length > 0) {
+        // Find nearest safe coin
+        let nearestCoin = availableCoins[0];
+        let minDist = Infinity;
+        
+        for (const coin of availableCoins) {
+          const dist = vecDist(gs.escaper.pos, coin);
+          if (dist < minDist) {
+            minDist = dist;
+            nearestCoin = coin;
+          }
+        }
+        
+        targetAngle = Math.atan2(nearestCoin.y - gs.escaper.pos.y, nearestCoin.x - gs.escaper.pos.x);
+      } else {
+        // All coins collected, just evade
+        targetAngle = Math.atan2(dy, dx) + (Math.random() - 0.5) * Math.PI / 3;
+      }
+    }
+    
+    // Add some unpredictability
+    targetAngle += (Math.random() - 0.5) * 0.3;
+    
+    gs.escaperAIDir = { 
+      x: Math.cos(targetAngle), 
+      y: Math.sin(targetAngle) 
+    };
   }
-  const s = PLAYER_SPEED * 0.88 * dt;
+  
+  // Apply movement with level-specific speed
+  const speedMultiplier = 1 + (gs.currentLevel - 1) * 0.05; // Slightly faster on higher levels
+  const s = PLAYER_SPEED * 0.88 * speedMultiplier * dt;
   gs.escaper.dir = Math.atan2(gs.escaperAIDir.y, gs.escaperAIDir.x);
-  moveEntity(gs.escaper, gs.escaperAIDir.x * s, gs.escaperAIDir.y * s);
+  moveEntity(gs.escaper, gs.escaperAIDir.x * s, gs.escaperAIDir.y * s, gs.currentLevel);
 }
 
 function updateGame(
@@ -344,13 +637,29 @@ function updateGame(
   keys: Set<string>,
 ): void {
   gs.frameCount++;
+  
+  // Handle respawn timer
+  if (gs.status === "respawning") {
+    gs.respawnTimer -= dt * 1000;
+    if (gs.respawnTimer <= 0) {
+      // Respawn escaper
+      const currentMap = getCurrentMap(gs.currentLevel);
+      const escaperSpawn = tileCenter(1, 1);
+      gs.escaper.pos = { ...escaperSpawn };
+      gs.escaper.dir = 0;
+      gs.status = "playing";
+      gs.respawnTimer = 0;
+    }
+    return;
+  }
+  
   gs.timeRemaining -= dt;
   if (gs.timeRemaining <= 0) {
     gs.timeRemaining = 0;
     gs.status = "over";
     gs.result = {
       winner: "escaper",
-      score: gs.totalScore,
+      score: gs.cumulativeScore + gs.totalScore,
       coinsCollected: gs.coinsCollected,
       timeRemaining: 0,
     };
@@ -381,10 +690,10 @@ function updateGame(
   }
   // Move entities
   if (playerRole === "escaper") {
-    updatePlayerMovement(gs.escaper, dt, keys, PLAYER_SPEED);
+    updatePlayerMovement(gs.escaper, dt, keys, PLAYER_SPEED, gs.currentLevel);
     updateAIHunter(gs, dt);
   } else {
-    updatePlayerMovement(gs.hunter, dt, keys, PLAYER_SPEED);
+    updatePlayerMovement(gs.hunter, dt, keys, PLAYER_SPEED, gs.currentLevel);
     updateAIEscaper(gs, dt);
   }
   // Coin collection
@@ -411,26 +720,53 @@ function updateGame(
       }
     }
   }
-  // All coins collected — escaper wins!
+  // All coins collected — level complete!
   if (gs.coins.every((c) => c.collected)) {
-    gs.status = "over";
-    gs.result = {
-      winner: "escaper",
-      score: gs.totalScore + Math.round(gs.timeRemaining * 5),
-      coinsCollected: gs.coinsCollected,
-      timeRemaining: gs.timeRemaining,
-    };
+    gs.cumulativeScore += gs.totalScore + Math.round(gs.timeRemaining * 5);
+    if (gs.currentLevel >= gs.totalLevels) {
+      // Game completed - all levels finished
+      gs.status = "over";
+      gs.result = {
+        winner: "escaper",
+        score: gs.cumulativeScore,
+        coinsCollected: gs.coinsCollected,
+        timeRemaining: gs.timeRemaining,
+      };
+    } else {
+      // Level complete - transition to next level
+      gs.status = "level_complete";
+    }
     return;
   }
   // Catch detection
   if (vecDist(gs.escaper.pos, gs.hunter.pos) < CATCH_DISTANCE) {
-    gs.status = "over";
-    gs.result = {
-      winner: "hunter",
-      score: Math.round(gs.timeRemaining * 10),
-      coinsCollected: gs.coinsCollected,
-      timeRemaining: gs.timeRemaining,
-    };
+    if (playerRole === "escaper") {
+      // Escaper caught - lose a life
+      gs.livesRemaining--;
+      if (gs.livesRemaining <= 0) {
+        // Game over - no lives left
+        gs.status = "over";
+        gs.result = {
+          winner: "hunter",
+          score: gs.cumulativeScore + Math.round(gs.timeRemaining * 10),
+          coinsCollected: gs.coinsCollected,
+          timeRemaining: gs.timeRemaining,
+        };
+      } else {
+        // Start respawn timer
+        gs.status = "respawning";
+        gs.respawnTimer = 5; // 5 seconds to respawn
+      }
+    } else {
+      // Hunter wins - game over immediately
+      gs.status = "over";
+      gs.result = {
+        winner: "hunter",
+        score: gs.cumulativeScore + Math.round(gs.timeRemaining * 10),
+        coinsCollected: gs.coinsCollected,
+        timeRemaining: gs.timeRemaining,
+      };
+    }
   }
 }
 
@@ -439,12 +775,18 @@ function updateGame(
 // ========================
 function renderGame(ctx: CanvasRenderingContext2D, gs: GameState): void {
   const now = Date.now();
-  // Background
-  ctx.fillStyle = "#060d1f";
+  const currentMap = getCurrentMap(gs.currentLevel);
+  // Background - Modern gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+  gradient.addColorStop(0, '#0f172a');
+  gradient.addColorStop(1, '#1e293b');
+  ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-  // Grid lines
-  ctx.strokeStyle = "#0d1a33";
+  
+  // Grid lines - Subtle modern look
+  ctx.strokeStyle = '#334155';
   ctx.lineWidth = 0.5;
+  ctx.globalAlpha = 0.3;
   for (let c = 0; c <= MAP_COLS; c++) {
     ctx.beginPath();
     ctx.moveTo(c * TILE_SIZE, 0);
@@ -457,19 +799,30 @@ function renderGame(ctx: CanvasRenderingContext2D, gs: GameState): void {
     ctx.lineTo(CANVAS_W, r * TILE_SIZE);
     ctx.stroke();
   }
-  // Walls
+  ctx.globalAlpha = 1;
+  
+  // Walls - Modern elevated look
   for (let r = 0; r < MAP_ROWS; r++) {
     for (let c = 0; c < MAP_COLS; c++) {
-      if (MAP[r][c] === 1) {
-        ctx.fillStyle = "#1a2744";
+      if (currentMap[r][c] === 1) {
+        // Wall gradient
+        const wallGradient = ctx.createLinearGradient(
+          c * TILE_SIZE, r * TILE_SIZE,
+          c * TILE_SIZE, (r + 1) * TILE_SIZE
+        );
+        wallGradient.addColorStop(0, '#475569');
+        wallGradient.addColorStop(1, '#1e293b');
+        ctx.fillStyle = wallGradient;
         ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        ctx.strokeStyle = "#243558";
-        ctx.lineWidth = 1;
+        
+        // Modern border
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
         ctx.strokeRect(
-          c * TILE_SIZE + 0.5,
-          r * TILE_SIZE + 0.5,
-          TILE_SIZE - 1,
-          TILE_SIZE - 1,
+          c * TILE_SIZE + 1,
+          r * TILE_SIZE + 1,
+          TILE_SIZE - 2,
+          TILE_SIZE - 2,
         );
       }
     }
@@ -483,7 +836,7 @@ function renderGame(ctx: CanvasRenderingContext2D, gs: GameState): void {
     ctx.fillStyle = `rgba(96,165,250,${alpha.toFixed(2)})`;
     ctx.fill();
   }
-  // Coins
+  // Coins - Modern golden look
   for (const coin of gs.coins) {
     if (!coin.collected) {
       const availableCoins = gs.coins.filter(c => !c.collected);
@@ -491,37 +844,58 @@ function renderGame(ctx: CanvasRenderingContext2D, gs: GameState): void {
       const isCurrentBonus = currentBonusCoin && currentBonusCoin.x === coin.x && currentBonusCoin.y === coin.y;
       
       ctx.save();
+      
       if (isCurrentBonus) {
-        // Bonus coin - pulsing golden effect
+        // Bonus coin - Enhanced golden effect
         const pulse = Math.sin(now * 0.006) * 0.3 + 0.7;
-        ctx.shadowBlur = 20 + pulse * 10;
-        ctx.shadowColor = "#fbbf24";
+        ctx.shadowBlur = 30 + pulse * 15;
+        ctx.shadowColor = '#fbbf24';
+        
+        const bonusGradient = ctx.createRadialGradient(coin.x, coin.y, 0, 0, 0, COIN_RADIUS * (1 + pulse * 0.3));
+        bonusGradient.addColorStop(0, '#fde047');
+        bonusGradient.addColorStop(0.5, '#f59e0b');
+        bonusGradient.addColorStop(1, '#d97706');
+        
         ctx.beginPath();
-        ctx.arc(coin.x, coin.y, COIN_RADIUS * (1 + pulse * 0.2), 0, Math.PI * 2);
-        ctx.fillStyle = "#f59e0b";
+        ctx.arc(coin.x, coin.y, COIN_RADIUS * (1 + pulse * 0.3), 0, Math.PI * 2);
+        ctx.fillStyle = bonusGradient;
         ctx.fill();
-        ctx.strokeStyle = "#fde68a";
+        
+        // Inner glow ring
+        ctx.strokeStyle = '#fbbf24';
         ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(coin.x, coin.y, COIN_RADIUS * (1 + pulse * 0.3) + 3, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Add star effect for bonus
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 10px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("★", coin.x, coin.y);
+        // Star symbol
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('★', coin.x, coin.y);
       } else {
-        // Regular coin
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "#fbbf24";
+        // Regular coin - Modern metallic look
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#fbbf24';
+        
+        const coinGradient = ctx.createRadialGradient(coin.x, coin.y, 0, 0, 0, COIN_RADIUS);
+        coinGradient.addColorStop(0, '#fde047');
+        coinGradient.addColorStop(0.7, '#f59e0b');
+        coinGradient.addColorStop(1, '#d97706');
+        
         ctx.beginPath();
         ctx.arc(coin.x, coin.y, COIN_RADIUS, 0, Math.PI * 2);
-        ctx.fillStyle = "#f59e0b";
+        ctx.fillStyle = coinGradient;
         ctx.fill();
-        ctx.strokeStyle = "#fde68a";
-        ctx.lineWidth = 1.5;
+        
+        // Modern border
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 0;
         ctx.stroke();
       }
+      
       ctx.restore();
     }
   }
@@ -584,86 +958,268 @@ function renderGame(ctx: CanvasRenderingContext2D, gs: GameState): void {
     ctx.stroke();
     ctx.restore();
   }
-  // Escaper
+  // Escaper - Modern blue with glow
   {
     const e = gs.escaper;
     ctx.save();
     ctx.translate(e.pos.x, e.pos.y);
-    ctx.shadowBlur = 18;
-    ctx.shadowColor = "#3b82f6";
+    
+    // Glow effect
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#3b82f6';
+    
+    // Gradient fill
+    const escaperGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, PLAYER_RADIUS);
+    escaperGradient.addColorStop(0, '#60a5fa');
+    escaperGradient.addColorStop(1, '#2563eb');
+    
     ctx.beginPath();
     ctx.arc(0, 0, PLAYER_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = "#1d4ed8";
+    ctx.fillStyle = escaperGradient;
     ctx.fill();
-    ctx.strokeStyle = "#93c5fd";
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
+    
+    // Modern border
+    ctx.strokeStyle = '#93c5fd';
+    ctx.lineWidth = 3;
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = "#dbeafe";
+    ctx.stroke();
+    
+    // Direction indicator
+    ctx.strokeStyle = '#dbeafe';
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.lineTo(Math.cos(e.dir) * 11, Math.sin(e.dir) * 11);
+    ctx.lineTo(Math.cos(e.dir) * 12, Math.sin(e.dir) * 12);
     ctx.stroke();
+    
     ctx.restore();
   }
-  // Hunter
+  // Hunter - Modern red with aggressive look
   {
     const h = gs.hunter;
     ctx.save();
     ctx.translate(h.pos.x, h.pos.y);
-    ctx.shadowBlur = 18;
-    ctx.shadowColor = "#ef4444";
+    
+    // Aggressive glow
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = '#ef4444';
+    
+    // Gradient fill
+    const hunterGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, PLAYER_RADIUS);
+    hunterGradient.addColorStop(0, '#dc2626');
+    hunterGradient.addColorStop(1, '#991b1b');
+    
     ctx.beginPath();
     ctx.arc(0, 0, PLAYER_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = "#991b1b";
+    ctx.fillStyle = hunterGradient;
     ctx.fill();
-    ctx.strokeStyle = "#fca5a5";
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
+    
+    // Modern border
+    ctx.strokeStyle = '#fca5a5';
+    ctx.lineWidth = 3;
     ctx.shadowBlur = 0;
+    ctx.stroke();
+    
+    // Eyes - more menacing
     const ex = Math.cos(h.dir) * 6;
     const ey = Math.sin(h.dir) * 6;
     const px = -Math.sin(h.dir) * 3.5;
     const py = Math.cos(h.dir) * 3.5;
-    ctx.fillStyle = "#fecaca";
+    
+    ctx.fillStyle = '#fecaca';
     ctx.beginPath();
     ctx.arc(ex + px, ey + py, 2.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
     ctx.arc(ex - px, ey - py, 2.5, 0, Math.PI * 2);
     ctx.fill();
+    
     ctx.restore();
   }
-  // HUD
-  ctx.fillStyle = "rgba(0,0,0,0.72)";
-  ctx.fillRect(0, 0, CANVAS_W, 46);
-  ctx.font = "bold 20px 'Courier New', monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  // HUD - Modern glassmorphism with lives display
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+  ctx.fillRect(0, 0, CANVAS_W, 56);
+  
+  // HUD border
+  ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, 0, CANVAS_W, 56);
+  
+  ctx.font = 'bold 20px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
   const tc =
     gs.timeRemaining <= 10
-      ? "#f87171"
+      ? '#ef4444'
       : gs.timeRemaining <= 30
-        ? "#fbbf24"
-        : "#4ade80";
+        ? '#f59e0b'
+        : '#10b981';
   ctx.fillStyle = tc;
   const mm = Math.floor(gs.timeRemaining / 60);
   const ss = Math.floor(gs.timeRemaining % 60);
-  ctx.fillText(`${mm}:${ss.toString().padStart(2, "0")}`, CANVAS_W / 2, 23);
-  ctx.textAlign = "left";
-  ctx.font = "bold 13px 'Courier New', monospace";
-  ctx.fillStyle = "#fbbf24";
-  ctx.fillText(`SCORE: ${gs.totalScore}`, 12, 15);
-  ctx.fillStyle = "#22d3ee";
-  ctx.fillText(`DECOYS[SPACE]: ${gs.decoysRemaining}`, 12, 35);
-  ctx.textAlign = "right";
-  ctx.fillStyle = "#60a5fa";
+  ctx.fillText(`${mm}:${ss.toString().padStart(2, "0")}`, CANVAS_W / 2, 18);
+  
+  // Level information - Modern styling
+  ctx.font = 'bold 14px "JetBrains Mono", monospace';
+  ctx.fillStyle = '#8b5cf6';
+  ctx.fillText(`Level ${gs.currentLevel}/${gs.totalLevels}`, CANVAS_W / 2, 38);
+  
+  // Lives display - Heart icons
+  ctx.font = 'bold 16px Arial';
+  ctx.fillStyle = '#ef4444';
+  ctx.textAlign = 'left';
+  ctx.fillText('Lives:', 12, 18);
+  
+  // Draw heart icons for lives
+  for (let i = 0; i < 3; i++) {
+    const x = 70 + i * 25;
+    const y = 18;
+    
+    if (i < gs.livesRemaining) {
+      // Full heart
+      ctx.fillStyle = '#ef4444';
+      ctx.fillText('❤️', x, y);
+    } else {
+      // Empty heart
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('🤍', x, y);
+    }
+  }
+  
+  // Respawn timer display
+  if (gs.status === 'respawning') {
+    ctx.font = 'bold 18px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#f59e0b';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Respawning in ${Math.ceil(gs.respawnTimer)}...`, CANVAS_W / 2, CANVAS_H / 2);
+  }
+  
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 13px "JetBrains Mono", monospace';
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillText(`SCORE: ${gs.cumulativeScore + gs.totalScore}`, 12, 38);
+  ctx.fillStyle = '#06b6d4';
+  ctx.fillText(`DECOYS[SPACE]: ${gs.decoysRemaining}`, 12, 58);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#3b82f6';
   ctx.fillText(
     `COINS: ${gs.coins.filter((c) => !c.collected).length} left`,
     CANVAS_W - 12,
-    23,
+    18,
+  );
+}
+
+// ========================
+// LEVEL TRANSITION COMPONENT
+// ========================
+interface LevelTransitionProps {
+  level: number;
+  totalLevels: number;
+  score: number;
+  onComplete: () => void;
+}
+
+function LevelTransition({ level, totalLevels, score, onComplete }: LevelTransitionProps) {
+  const [countdown, setCountdown] = useState(5);
+  const [isComplete, setIsComplete] = useState(false);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (!isComplete) {
+      setIsComplete(true);
+      setTimeout(() => {
+        onComplete();
+      }, 500);
+    }
+  }, [countdown, isComplete, onComplete]);
+
+  return (
+    <div className="absolute inset-0 bg-slate-900/95 flex items-center justify-center z-50">
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", duration: 0.6 }}
+        className="text-center"
+      >
+        <div className="mb-8">
+          <motion.div
+            initial={{ rotateY: 0 }}
+            animate={{ rotateY: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="text-6xl mb-4"
+          >
+            🌟
+          </motion.div>
+          <h2 className="text-4xl font-black text-white mb-2">
+            Level {level} Complete!
+          </h2>
+          <p className="text-xl text-slate-300 mb-4">
+            Score: {score} points
+          </p>
+          {level < totalLevels && (
+            <p className="text-lg text-purple-400">
+              Get ready for Level {level + 1}...
+            </p>
+          )}
+        </div>
+
+        <div className="relative w-32 h-32 mx-auto mb-6">
+          <svg className="transform -rotate-90 w-32 h-32">
+            <circle
+              cx="64"
+              cy="64"
+              r="56"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="none"
+              className="text-slate-700"
+            />
+            <motion.circle
+              cx="64"
+              cy="64"
+              r="56"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="none"
+              className="text-purple-400"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: (5 - countdown) / 5 }}
+              transition={{ duration: 1, ease: "easeInOut" }}
+              style={{
+                pathLength: (5 - countdown) / 5,
+              }}
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <motion.div
+              key={countdown}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.5, opacity: 0 }}
+              className="text-4xl font-black text-white"
+            >
+              {countdown}
+            </motion.div>
+          </div>
+        </div>
+
+        {isComplete && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-lg text-green-400 font-semibold"
+          >
+            Starting Level {level + 1}...
+          </motion.div>
+        )}
+      </motion.div>
+    </div>
   );
 }
 
@@ -677,15 +1233,33 @@ interface GameCanvasProps {
 
 function GameCanvas({ playerRole, onGameOver }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gsRef = useRef<GameState>(createInitialGameState());
+  const gsRef = useRef<GameState>(createInitialGameState(1, 5));
   const keysRef = useRef<Set<string>>(new Set());
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const onGameOverRef = useRef(onGameOver);
+  const [showLevelTransition, setShowLevelTransition] = useState(false);
+  const [levelTransitionData, setLevelTransitionData] = useState<{
+    level: number;
+    totalLevels: number;
+    score: number;
+  } | null>(null);
 
   useEffect(() => {
     onGameOverRef.current = onGameOver;
   }, [onGameOver]);
+
+  const startNextLevel = useCallback(() => {
+    const gs = gsRef.current;
+    const nextLevel = gs.currentLevel + 1;
+    const newGs = createInitialGameState(nextLevel, gs.totalLevels);
+    newGs.cumulativeScore = gs.cumulativeScore;
+    newGs.livesRemaining = gs.livesRemaining; // Preserve lives between levels
+    gsRef.current = newGs;
+    setShowLevelTransition(false);
+    setLevelTransitionData(null);
+    lastTimeRef.current = 0;
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -722,7 +1296,13 @@ function GameCanvas({ playerRole, onGameOver }: GameCanvasProps) {
   }, [playerRole]);
 
   useEffect(() => {
-    gsRef.current = createInitialGameState();
+    const gs = gsRef.current;
+    // Reset game state properly for new game
+    if (gs.status === "over" && gs.result) {
+      onGameOverRef.current(gs.result);
+      return;
+    }
+    
     lastTimeRef.current = 0;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -733,14 +1313,26 @@ function GameCanvas({ playerRole, onGameOver }: GameCanvasProps) {
       const dt = Math.min((timestamp - lastTimeRef.current) / 1000, 0.05);
       lastTimeRef.current = timestamp;
       const gs = gsRef.current;
-      if (gs.status === "playing") {
+      
+      if (gs.status === "playing" || gs.status === "respawning") {
         updateGame(gs, dt, playerRole, keysRef.current);
       }
-      if ((gs.status as string) === "over" && gs.result) {
+      
+      if (gs.status === "level_complete" && !showLevelTransition) {
+        setLevelTransitionData({
+          level: gs.currentLevel,
+          totalLevels: gs.totalLevels,
+          score: gs.totalScore + Math.round(gs.timeRemaining * 5),
+        });
+        setShowLevelTransition(true);
+      }
+      
+      if (gs.status === "over" && gs.result) {
         renderGame(ctx, gs);
         onGameOverRef.current(gs.result);
         return;
       }
+      
       renderGame(ctx, gs);
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -748,24 +1340,34 @@ function GameCanvas({ playerRole, onGameOver }: GameCanvasProps) {
     return () => {
       cancelAnimationFrame(rafRef.current);
     };
-  }, [playerRole]);
+  }, [playerRole, showLevelTransition]);
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_W}
-        height={CANVAS_H}
-        data-ocid="game.canvas_target"
-        className="rounded-lg border border-cyan-500/20 shadow-2xl shadow-cyan-950/50"
-        style={{ maxWidth: "100%", imageRendering: "pixelated" }}
-      />
-      <div className="flex gap-6 text-xs font-mono text-slate-400">
-        <span className="text-blue-400">● You (Escaper)</span>
-        <span className="text-red-400">● AI Hunter</span>
-        <span className="text-yellow-400">● Coins (+10/★+25)</span>
-        <span className="text-cyan-400">● Decoys [SPACE] (5s)</span>
-        <span>WASD / Arrow Keys to move</span>
+    <div className="relative flex flex-col items-center justify-center min-h-screen w-full">
+      {showLevelTransition && levelTransitionData && (
+        <LevelTransition
+          level={levelTransitionData.level}
+          totalLevels={levelTransitionData.totalLevels}
+          score={levelTransitionData.score}
+          onComplete={startNextLevel}
+        />
+      )}
+      <div className="flex flex-col items-center gap-3">
+        <canvas
+          ref={canvasRef}
+          width={CANVAS_W}
+          height={CANVAS_H}
+          data-ocid="game.canvas_target"
+          className="rounded-lg border border-cyan-500/20 shadow-2xl shadow-cyan-950/50"
+          style={{ maxWidth: "100%", imageRendering: "pixelated" }}
+        />
+        <div className="flex gap-6 text-xs font-mono text-slate-400">
+          <span className="text-blue-400">● You (Escaper)</span>
+          <span className="text-red-400">● AI Hunter</span>
+          <span className="text-yellow-400">● Coins (+10/★+25)</span>
+          <span className="text-cyan-400">● Decoys [SPACE] (5s)</span>
+          <span>WASD / Arrow Keys to move</span>
+        </div>
       </div>
     </div>
   );
@@ -776,12 +1378,13 @@ function GameCanvas({ playerRole, onGameOver }: GameCanvasProps) {
 // ========================
 interface RoleSelectProps {
   onStart: (role: Role, name: string) => void;
+  showTour: boolean;
+  onTourComplete?: () => void;
 }
 
-  function RoleSelectScreen({ onStart }: RoleSelectProps) {
+  function RoleSelectScreen({ onStart, showTour, onTourComplete }: RoleSelectProps) {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [playerName, setPlayerName] = useState("");
-  const [showTour, setShowTour] = useState(true);
   const [tourStep, setTourStep] = useState(0);
 
   const handleStart = () => {
@@ -792,24 +1395,24 @@ interface RoleSelectProps {
 
   const tourSteps = [
     {
-      title: "Welcome to Chase & Escape!",
+      title: "Welcome to Chase or Escape!",
       description: "Choose your hero and complete your mission!",
       icon: <Gamepad2 className="w-16 h-16 text-blue-400" />,
       content: (
-        <div className="text-center space-y-4">
-          <p className="text-white text-lg">Be fast, smart, and quick to win!</p>
-          <div className="flex justify-center gap-6">
+        <div className="text-center space-y-2">
+          <p className="text-white text-sm">Be fast, smart, and quick to win!</p>
+          <div className="flex justify-center gap-3">
             <div className="text-center">
-              <div className="text-2xl mb-1">🏃‍♂️</div>
-              <p className="text-blue-300">Be Fast</p>
+              <div className="text-lg mb-1">🏃‍♂️</div>
+              <p className="text-blue-300 text-xs">Be Fast</p>
             </div>
             <div className="text-center">
-              <div className="text-2xl mb-1">🎯</div>
-              <p className="text-red-300">Be Smart</p>
+              <div className="text-lg mb-1">🎯</div>
+              <p className="text-red-300 text-xs">Be Smart</p>
             </div>
             <div className="text-center">
-              <div className="text-2xl mb-1">⏱</div>
-              <p className="text-yellow-300">Be Quick</p>
+              <div className="text-lg mb-1">⏱</div>
+              <p className="text-yellow-300 text-xs">Be Quick</p>
             </div>
           </div>
         </div>
@@ -820,27 +1423,27 @@ interface RoleSelectProps {
       description: "Master the basics to win!",
       icon: <Sparkles className="w-16 h-16 text-yellow-400" />,
       content: (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
-            <div className="flex items-center gap-3">
-              <Timer className="w-8 h-8 text-green-400" />
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-2">
+            <div className="flex items-center gap-2">
+              <Timer className="w-5 h-5 text-green-400" />
               <div>
-                <p className="text-white font-semibold">90 Seconds Timer</p>
-                <p className="text-white/70 text-sm">Complete your mission before time runs out!</p>
+                <p className="text-white font-semibold text-xs">90 Seconds Timer</p>
+                <p className="text-white/70 text-xs">Complete before time runs out!</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Coins className="w-8 h-8 text-yellow-400" />
+            <div className="flex items-center gap-2">
+              <Coins className="w-5 h-5 text-yellow-400" />
               <div>
-                <p className="text-white font-semibold">15 Magic Coins</p>
-                <p className="text-white/70 text-sm">Escapers must collect all coins to win!</p>
+                <p className="text-white font-semibold text-xs">15 Magic Coins</p>
+                <p className="text-white/70 text-xs">Escapers collect all coins to win!</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Target className="w-8 h-8 text-purple-400" />
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-purple-400" />
               <div>
-                <p className="text-white font-semibold">Smart AI Opponent</p>
-                <p className="text-white/70 text-sm">Face an intelligent computer opponent!</p>
+                <p className="text-white font-semibold text-xs">Smart AI Opponent</p>
+                <p className="text-white/70 text-xs">Face intelligent computer opponent!</p>
               </div>
             </div>
           </div>
@@ -852,21 +1455,21 @@ interface RoleSelectProps {
       description: "Learn the controls to play!",
       icon: <Heart className="w-16 h-16 text-pink-400" />,
       content: (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3">
             <div className="text-center">
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <span className="text-white font-bold">↑↓←→</span>
+              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-1">
+                <span className="text-white font-bold text-xs">↑↓←→</span>
               </div>
-              <p className="text-white font-semibold">Arrow Keys</p>
-              <p className="text-white/70 text-sm">Move your character</p>
+              <p className="text-white font-semibold text-xs">Arrow Keys</p>
+              <p className="text-white/70 text-xs">Move character</p>
             </div>
             <div className="text-center">
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <span className="text-white font-bold text-sm">SPACE</span>
+              <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mx-auto mb-1">
+                <span className="text-white font-bold text-xs">SPACE</span>
               </div>
-              <p className="text-white font-semibold">Space Bar</p>
-              <p className="text-white/70 text-sm">Drop decoys (Escaper only)</p>
+              <p className="text-white font-semibold text-xs">Space Bar</p>
+              <p className="text-white/70 text-xs">Drop decoys</p>
             </div>
           </div>
         </div>
@@ -877,25 +1480,25 @@ interface RoleSelectProps {
       description: "Select your character and start playing!",
       icon: <Trophy className="w-16 h-16 text-amber-400" />,
       content: (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-6">
-            <div className="text-center p-4 bg-blue-500/20 rounded-lg">
-              <div className="text-2xl mb-2">🏃‍♂️</div>
-              <p className="text-white font-bold">Escaper</p>
-              <p className="text-blue-300 text-sm">Speed Hero</p>
-              <ul className="text-white/80 text-sm mt-2 space-y-1">
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="text-center p-2 bg-blue-500/20 rounded-lg">
+              <div className="text-lg mb-1">🏃‍♂️</div>
+              <p className="text-white font-bold text-xs">Escaper</p>
+              <p className="text-blue-300 text-xs">Speed Hero</p>
+              <ul className="text-white/80 text-xs mt-1 space-y-0">
                 <li>• Collect 15 coins</li>
                 <li>• Drop decoys</li>
-                <li>• Survive 90 seconds</li>
+                <li>• Survive 90s</li>
               </ul>
             </div>
-            <div className="text-center p-4 bg-red-500/20 rounded-lg">
-              <div className="text-2xl mb-2">🎯</div>
-              <p className="text-white font-bold">Hunter</p>
-              <p className="text-red-300 text-sm">Chase Master</p>
-              <ul className="text-white/80 text-sm mt-2 space-y-1">
+            <div className="text-center p-2 bg-red-500/20 rounded-lg">
+              <div className="text-lg mb-1">🎯</div>
+              <p className="text-white font-bold text-xs">Hunter</p>
+              <p className="text-red-300 text-xs">Chase Master</p>
+              <ul className="text-white/80 text-xs mt-1 space-y-0">
                 <li>• Follow footprints</li>
-                <li>• Catch the Escaper</li>
+                <li>• Catch Escaper</li>
                 <li>• Score by time</li>
               </ul>
             </div>
@@ -909,7 +1512,10 @@ interface RoleSelectProps {
     if (tourStep < tourSteps.length - 1) {
       setTourStep(tourStep + 1);
     } else {
-      setShowTour(false);
+      // Tour completed - notify parent to show main page
+      if (onTourComplete) {
+        onTourComplete();
+      }
     }
   };
 
@@ -920,7 +1526,10 @@ interface RoleSelectProps {
   };
 
   const skipTour = () => {
-    setShowTour(false);
+    // Tour is now controlled by parent component
+    if (onTourComplete) {
+      onTourComplete();
+    }
   };
 
   if (showTour) {
@@ -932,7 +1541,7 @@ interface RoleSelectProps {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
-          className="relative z-10 w-full max-w-2xl h-[600px] flex flex-col"
+          className="relative z-10 w-full max-w-2xl h-[400px] flex flex-col"
         >
           <Card className="bg-slate-800 border border-slate-600 shadow-2xl flex flex-col h-full">
             {/* Fixed Header */}
@@ -960,8 +1569,8 @@ interface RoleSelectProps {
               </div>
             </div>
             
-            {/* Scrollable Content Area */}
-            <div className="flex-1 overflow-y-auto px-6 py-8">
+            {/* Content Area - No Scrolling */}
+            <div className="flex-1 px-6 py-4 overflow-hidden">
               {tourSteps[tourStep].content}
             </div>
             
@@ -1040,36 +1649,35 @@ interface RoleSelectProps {
         <div className="absolute bottom-32 left-40 w-28 h-28 bg-green-400/10 rounded-full blur-xl animate-pulse delay-2000" />
       </div>
 
-      <div className="relative z-10 w-full max-w-6xl mx-auto">
+      <div className="relative z-10 w-full max-w-2xl mx-auto">
         {/* Main Title */}
         <motion.div
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-8"
+          className="text-center mb-6"
         >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Gamepad2 className="w-12 h-12 text-blue-400 animate-bounce" />
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <Gamepad2 className="w-10 h-10 text-blue-400 animate-bounce" />
             <div
-              className="text-6xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-green-400 bg-clip-text text-transparent"
+              className="text-4xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-green-400 bg-clip-text text-transparent"
               style={{ textShadow: "0 0 40px rgba(59,130,246,0.3)" }}
             >
-              CHASE & ESCAPE
+              CHASE OR ESCAPE
             </div>
-            <Gamepad2 className="w-12 h-12 text-blue-400 animate-bounce delay-300" />
+            <Gamepad2 className="w-10 h-10 text-blue-400 animate-bounce delay-300" />
           </div>
-          <p className="text-slate-300 text-lg font-medium">
+          <p className="text-slate-300 text-base font-medium">
             🎮 An Exciting Adventure Game for Everyone! 🎮
           </p>
           
           {/* Tour Button */}
           <Button
-            onClick={() => setShowTour(true)}
             variant="outline"
-            className="mt-4 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+            className="mt-3 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
           >
-            <Play className="w-4 h-4 mr-2" />
-            Show Tour
+            <BookOpen className="w-4 h-4 mr-2" />
+            Tour Completed
           </Button>
         </motion.div>
 
@@ -1078,26 +1686,26 @@ interface RoleSelectProps {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="w-full max-w-4xl mx-auto"
+          className="w-full max-w-2xl mx-auto"
         >
           <Card className="bg-slate-800/80 backdrop-blur-md border-2 border-slate-600 shadow-2xl">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-2xl text-white">
+            <CardHeader className="text-center pb-3">
+              <CardTitle className="text-xl text-white">
                 🎭 Choose Your Character 🎭
               </CardTitle>
-              <CardDescription className="text-slate-300 text-base">
+              <CardDescription className="text-slate-300 text-sm">
                 Pick your hero and start your adventure!
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6 p-6">
+            <CardContent className="space-y-4 p-4">
               {/* Role Selection */}
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-4">
                 <motion.button
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   data-ocid="role.escaper_button"
                   onClick={() => setSelectedRole("escaper")}
-                  className={`p-6 rounded-xl border-2 text-left transition-all duration-300 cursor-pointer relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all duration-300 cursor-pointer relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-400 ${
                     selectedRole === "escaper"
                       ? "border-blue-500 bg-blue-500/20 shadow-xl shadow-blue-500/30"
                       : "border-slate-600 bg-slate-700/50 hover:border-slate-500 hover:bg-slate-700/70"
@@ -1107,37 +1715,37 @@ interface RoleSelectProps {
                 >
                   {selectedRole === "escaper" && (
                     <div className="absolute top-2 right-2">
-                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center" aria-label="Selected">
-                        <span className="text-white text-lg">✓</span>
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center" aria-label="Selected">
+                        <span className="text-white text-sm">✓</span>
                       </div>
                     </div>
                   )}
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/40">
-                      <Zap className="w-8 h-8 text-white" />
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/40">
+                      <Zap className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <div className="font-bold text-xl text-white">🏃‍♂️ Escaper</div>
+                      <div className="font-bold text-lg text-white">🏃‍♂️ Escaper</div>
                       <Badge
                         variant="outline"
-                        className="text-sm border-blue-400/40 text-blue-300 bg-blue-400/10"
+                        className="text-xs border-blue-400/40 text-blue-300 bg-blue-400/10"
                       >
                         Speed Hero
                       </Badge>
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2 text-slate-300">
-                      <div className="w-6 h-6 bg-yellow-500/20 rounded flex items-center justify-center text-yellow-400 text-sm" aria-hidden="true">🪙</div>
-                      <span className="text-sm font-medium">Collect all 15 coins to WIN!</span>
+                      <div className="w-4 h-4 bg-yellow-500/20 rounded flex items-center justify-center text-yellow-400 text-xs" aria-hidden="true">🪙</div>
+                      <span className="text-xs font-medium">Collect all 15 coins to WIN!</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-300">
-                      <div className="w-6 h-6 bg-purple-500/20 rounded flex items-center justify-center text-purple-400 text-sm" aria-hidden="true">🌀</div>
-                      <span className="text-sm font-medium">Drop magic decoys (5 seconds)</span>
+                      <div className="w-4 h-4 bg-purple-500/20 rounded flex items-center justify-center text-purple-400 text-xs" aria-hidden="true">🌀</div>
+                      <span className="text-xs font-medium">Drop magic decoys (5 seconds)</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-300">
-                      <div className="w-6 h-6 bg-green-500/20 rounded flex items-center justify-center text-green-400 text-sm" aria-hidden="true">⏱</div>
-                      <span className="text-sm font-medium">Survive 90 seconds to win</span>
+                      <div className="w-4 h-4 bg-green-500/20 rounded flex items-center justify-center text-green-400 text-xs" aria-hidden="true">⏱</div>
+                      <span className="text-xs font-medium">Survive 90 seconds to win</span>
                     </div>
                   </div>
                 </motion.button>
@@ -1147,7 +1755,7 @@ interface RoleSelectProps {
                   whileTap={{ scale: 0.97 }}
                   data-ocid="role.hunter_button"
                   onClick={() => setSelectedRole("hunter")}
-                  className={`p-6 rounded-xl border-2 text-left transition-all duration-300 cursor-pointer relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all duration-300 cursor-pointer relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-red-400 ${
                     selectedRole === "hunter"
                       ? "border-red-500 bg-red-500/20 shadow-xl shadow-red-500/30"
                       : "border-slate-600 bg-slate-700/50 hover:border-slate-500 hover:bg-slate-700/70"
@@ -1157,49 +1765,49 @@ interface RoleSelectProps {
                 >
                   {selectedRole === "hunter" && (
                     <div className="absolute top-2 right-2">
-                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center" aria-label="Selected">
-                        <span className="text-white text-lg">✓</span>
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center" aria-label="Selected">
+                        <span className="text-white text-sm">✓</span>
                       </div>
                     </div>
                   )}
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/40">
-                      <Shield className="w-8 h-8 text-white" />
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/40">
+                      <Shield className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <div className="font-bold text-xl text-white">🎯 Hunter</div>
+                      <div className="font-bold text-lg text-white">🎯 Hunter</div>
                       <Badge
                         variant="outline"
-                        className="text-sm border-red-400/40 text-red-300 bg-red-400/10"
+                        className="text-xs border-red-400/40 text-red-300 bg-red-400/10"
                       >
                         Chase Master
                       </Badge>
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2 text-slate-300">
-                      <div className="w-6 h-6 bg-cyan-500/20 rounded flex items-center justify-center text-cyan-400 text-sm" aria-hidden="true">👣</div>
-                      <span className="text-sm font-medium">Follow fading footprints</span>
+                      <div className="w-4 h-4 bg-cyan-500/20 rounded flex items-center justify-center text-cyan-400 text-xs" aria-hidden="true">👣</div>
+                      <span className="text-xs font-medium">Follow fading footprints</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-300">
-                      <div className="w-6 h-6 bg-orange-500/20 rounded flex items-center justify-center text-orange-400 text-sm" aria-hidden="true">🎯</div>
-                      <span className="text-sm font-medium">Catch the Escaper to win</span>
+                      <div className="w-4 h-4 bg-orange-500/20 rounded flex items-center justify-center text-orange-400 text-xs" aria-hidden="true">🎯</div>
+                      <span className="text-xs font-medium">Catch the Escaper to win</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-300">
-                      <div className="w-6 h-6 bg-pink-500/20 rounded flex items-center justify-center text-pink-400 text-sm" aria-hidden="true">🏆</div>
-                      <span className="text-sm font-medium">Score based on time remaining</span>
+                      <div className="w-4 h-4 bg-pink-500/20 rounded flex items-center justify-center text-pink-400 text-xs" aria-hidden="true">🏆</div>
+                      <span className="text-xs font-medium">Score based on time remaining</span>
                     </div>
                   </div>
                 </motion.button>
               </div>
 
               {/* Name Input */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <label
                   htmlFor="player-name-input"
-                  className="text-lg text-white font-medium flex items-center gap-2"
+                  className="text-sm text-white font-medium flex items-center gap-2"
                 >
-                  <Heart className="w-5 h-5 text-red-400" />
+                  <Heart className="w-4 h-4 text-red-400" />
                   Your Hero Name
                 </label>
                 <Input
@@ -1212,11 +1820,11 @@ interface RoleSelectProps {
                   }}
                   placeholder="Enter your hero name..."
                   maxLength={20}
-                  className="bg-slate-700/50 border-2 border-slate-600 text-white placeholder-slate-400 focus:border-blue-400 focus:bg-slate-700/70 text-lg h-12 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+                  className="bg-slate-700/50 border-2 border-slate-600 text-white placeholder-slate-400 focus:border-blue-400 focus:bg-slate-700/70 text-sm h-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/50"
                   aria-required="true"
                   aria-describedby="name-help"
                 />
-                <p id="name-help" className="text-sm text-slate-400">
+                <p id="name-help" className="text-xs text-slate-400">
                   Choose a name that represents your hero!
                 </p>
               </div>
@@ -1226,33 +1834,33 @@ interface RoleSelectProps {
                 data-ocid="role.start_button"
                 onClick={handleStart}
                 disabled={!selectedRole || !playerName.trim()}
-                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white border-0 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-400/50"
+                className="w-full h-12 text-base font-bold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white border-0 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-400/50"
                 aria-describedby="start-help"
               >
                 {selectedRole ? (
                   <>
-                    <Play className="w-5 h-5" />
+                    <Play className="w-4 h-4" />
                     {`Start Adventure as ${selectedRole === "escaper" ? "🏃‍♂️ Escaper" : "🎯 Hunter"}!`}
-                    <Play className="w-5 h-5" />
+                    <Play className="w-4 h-4" />
                   </>
                 ) : (
                   <>
-                    <Gamepad2 className="w-5 h-5" />
+                    <Gamepad2 className="w-4 h-4" />
                     Choose your hero first!
-                    <Gamepad2 className="w-5 h-5" />
+                    <Gamepad2 className="w-4 h-4" />
                   </>
                 )}
               </Button>
               
-              <p id="start-help" className="text-sm text-slate-400 text-center">
+              <p id="start-help" className="text-xs text-slate-400 text-center">
                 {!selectedRole || !playerName.trim() 
                   ? "Select a character and enter your name to begin" 
                   : "Ready to start your adventure!"}
               </p>
 
               {/* Quick Tips */}
-              <div className="bg-slate-700/30 rounded-lg p-4 border border-slate-600/50">
-                <p className="text-slate-300 text-sm text-center">
+              <div className="bg-slate-700/30 rounded-lg p-3 border border-slate-600/50">
+                <p className="text-slate-300 text-xs text-center">
                   💡 <span className="font-medium">Pro Tip:</span> Escapers can press <kbd className="px-2 py-1 bg-slate-600 rounded text-xs">SPACE</kbd> to drop decoys!
                 </p>
               </div>
@@ -1344,297 +1952,231 @@ function GameOverScreen({
         : `The Hunter caught the Escaper with ${result.timeRemaining.toFixed(1)}s remaining!`;
 
   return (
-    <div className="min-h-screen bg-game-bg flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", duration: 0.7 }}
-        className="w-full max-w-2xl"
+        className="relative z-10 w-full max-w-2xl h-[400px] flex flex-col"
       >
-        {/* Result Banner */}
-        <div
-          className={`text-center mb-6 p-6 rounded-2xl border ${
-            playerWon
-              ? "bg-green-500/10 border-green-500/30"
-              : "bg-red-500/10 border-red-500/30"
-          }`}
-        >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", delay: 0.2 }}
-            className="text-6xl mb-3"
-          >
-            {playerWon
-              ? result.coinsCollected === NUM_COINS
-                ? "🌟"
-                : "🏆"
-              : "💀"}
-          </motion.div>
-          <h1
-            className={`text-3xl font-black tracking-tight mb-1 ${
-              playerWon ? "text-green-400" : "text-red-400"
-            }`}
-          >
-            {playerWon ? "YOU WIN!" : "CAUGHT!"}
-          </h1>
-          <p className="text-slate-400">{resultMessage}</p>
-        </div>
+        <Card className="bg-slate-800 border border-slate-600 shadow-2xl flex flex-col h-full">
+          {/* Fixed Header */}
+          <div className="px-6 py-4 border-b border-slate-600 flex-shrink-0">
+            <div className="text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", delay: 0.2 }}
+                className="text-4xl mb-2"
+              >
+                {playerWon
+                  ? result.coinsCollected === NUM_COINS
+                    ? "🌟"
+                    : "🏆"
+                  : "💀"}
+              </motion.div>
+              <h1
+                className={`text-2xl font-black tracking-tight mb-1 ${
+                  playerWon ? "text-green-400" : "text-red-400"
+                }`}
+              >
+                {playerWon ? "YOU WIN!" : "CAUGHT!"}
+              </h1>
+              <p className="text-slate-400 text-sm">{resultMessage}</p>
+            </div>
+          </div>
+          
+          {/* Content Area - No Scrolling */}
+          <div className="flex-1 px-6 py-4 overflow-hidden">
+            <Tabs defaultValue="result">
+              <TabsList className="w-full bg-slate-700/80 border border-slate-600 mb-3">
+                <TabsTrigger
+                  value="result"
+                  className="flex-1 data-[state=active]:bg-slate-600 text-xs"
+                >
+                  Results
+                </TabsTrigger>
+                <TabsTrigger
+                  value="leaderboard"
+                  className="flex-1 data-[state=active]:bg-slate-600 text-xs"
+                  data-ocid="leaderboard.tab"
+                >
+                  <Trophy className="w-3 h-3 mr-1" /> Leaderboard
+                </TabsTrigger>
+                <TabsTrigger
+                  value="howtoplay"
+                  className="flex-1 data-[state=active]:bg-slate-600 text-xs"
+                >
+                  How to Play
+                </TabsTrigger>
+              </TabsList>
 
-        <Tabs defaultValue="result">
-          <TabsList className="w-full bg-slate-800/80 border border-slate-700 mb-4">
-            <TabsTrigger
-              value="result"
-              className="flex-1 data-[state=active]:bg-slate-700"
-            >
-              Results
-            </TabsTrigger>
-            <TabsTrigger
-              value="leaderboard"
-              className="flex-1 data-[state=active]:bg-slate-700"
-              data-ocid="leaderboard.tab"
-            >
-              <Trophy className="w-3.5 h-3.5 mr-1" /> Leaderboard
-            </TabsTrigger>
-            <TabsTrigger
-              value="howtoplay"
-              className="flex-1 data-[state=active]:bg-slate-700"
-            >
-              How to Play
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="result">
-            <Card className="bg-slate-900/80 border-slate-700/60">
-              <CardContent className="p-6 space-y-4">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="bg-slate-800/60 rounded-xl p-4">
-                    <div className="text-2xl font-black text-yellow-400">
-                      {result.score}
+              <TabsContent value="result" className="mt-0">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-slate-700/60 rounded-lg p-2">
+                      <div className="text-lg font-black text-yellow-400">
+                        {result.score}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        Score
+                      </div>
                     </div>
-                    <div className="text-xs text-slate-400 mt-1">
-                      Final Score
+                    <div className="bg-slate-700/60 rounded-lg p-2">
+                      <div className="text-lg font-black text-amber-400">
+                        {result.coinsCollected}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        Coins
+                      </div>
+                    </div>
+                    <div className="bg-slate-700/60 rounded-lg p-2">
+                      <div className="text-lg font-black text-cyan-400">
+                        {result.timeRemaining.toFixed(1)}s
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        Time
+                      </div>
                     </div>
                   </div>
-                  <div className="bg-slate-800/60 rounded-xl p-4">
-                    <div className="text-2xl font-black text-amber-400">
-                      {result.coinsCollected}
-                    </div>
-                    <div className="text-xs text-slate-400 mt-1">
-                      Coins Collected
-                    </div>
-                  </div>
-                  <div className="bg-slate-800/60 rounded-xl p-4">
-                    <div className="text-2xl font-black text-cyan-400">
-                      {result.timeRemaining.toFixed(1)}s
-                    </div>
-                    <div className="text-xs text-slate-400 mt-1">
-                      Time Remaining
-                    </div>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2 bg-slate-800/40 rounded-lg p-3">
-                  <Badge
-                    className={
-                      playerRole === "escaper" ? "bg-blue-600" : "bg-red-700"
-                    }
-                  >
-                    {playerRole === "escaper" ? "Escaper" : "Hunter"}
-                  </Badge>
-                  <span className="text-white font-semibold">{playerName}</span>
-                  <span className="text-slate-400 ml-auto text-sm">
-                    Score: {result.score}
-                  </span>
-                </div>
-
-                <div className="flex gap-3">
-                  {!submitted && (
-                    <Button
-                      data-ocid="gameover.submit_button"
-                      onClick={handleSubmit}
-                      disabled={submitScore.isPending}
-                      className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-white border-0"
+                  <div className="flex items-center gap-2 bg-slate-700/40 rounded-lg p-2">
+                    <Badge
+                      className={`text-xs ${
+                        playerRole === "escaper" ? "bg-blue-600" : "bg-red-700"
+                      }`}
                     >
-                      {submitScore.isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />{" "}
-                          Submitting...
-                        </>
-                      ) : (
-                        <>
-                          <Trophy className="w-4 h-4 mr-2" /> Submit Score
-                        </>
-                      )}
+                      {playerRole === "escaper" ? "Escaper" : "Hunter"}
+                    </Badge>
+                    <span className="text-white text-sm font-medium">{playerName}</span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {!submitted && (
+                      <Button
+                        data-ocid="gameover.submit_button"
+                        onClick={handleSubmit}
+                        disabled={submitScore.isPending}
+                        className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-white border-0 text-xs h-8"
+                      >
+                        {submitScore.isPending ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" /> Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <Trophy className="w-3 h-3 mr-1" /> Submit Score
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {submitted && (
+                      <div className="flex-1 text-center text-green-400 text-xs py-1 font-medium">
+                        ✓ Score submitted!
+                      </div>
+                    )}
+                    <Button
+                      data-ocid="gameover.play_again_button"
+                      onClick={onPlayAgain}
+                      className="flex-1 bg-cyan-700 hover:bg-cyan-600 text-white border-0 text-xs h-8"
+                    >
+                      Play Again
                     </Button>
-                  )}
-                  {submitted && (
-                    <div className="flex-1 text-center text-green-400 text-sm py-2 font-medium">
-                      ✓ Score submitted!
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="leaderboard" className="mt-0">
+                <div className="space-y-2">
+                  <div className="text-center">
+                    <h3 className="text-white text-sm font-medium mb-2">Top Scores</h3>
+                  </div>
+                  {scoresLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                    </div>
+                  ) : scores && scores.length > 0 ? (
+                    <div className="space-y-1">
+                      {scores.slice(0, 5).map((entry, i) => (
+                        <div key={`${entry.playerName}-${i}`} className="flex items-center justify-between p-1 bg-slate-700/30 rounded">
+                          <span className="text-slate-400 text-xs w-4">{i + 1}</span>
+                          <span className="text-white text-xs truncate flex-1">{entry.playerName}</span>
+                          <span className="text-yellow-400 text-xs font-mono">{Number(entry.score).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-slate-500 text-xs">
+                      No scores yet. Be the first!
                     </div>
                   )}
                   <Button
-                    data-ocid="gameover.play_again_button"
                     onClick={onPlayAgain}
-                    className="flex-1 bg-cyan-700 hover:bg-cyan-600 text-white border-0"
+                    className="w-full bg-cyan-700 hover:bg-cyan-600 text-white border-0 text-xs h-8"
                   >
                     Play Again
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="leaderboard">
-            <Card className="bg-slate-900/80 border-slate-700/60">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white text-base flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-yellow-400" /> Top Scores
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                {scoresLoading ? (
-                  <div
-                    className="flex items-center justify-center py-8"
-                    data-ocid="leaderboard.loading_state"
+              </TabsContent>
+              
+              <TabsContent value="howtoplay" className="mt-0">
+                <div className="space-y-2">
+                  <div className="text-center">
+                    <h3 className="text-white text-sm font-medium mb-2">How to Play</h3>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <h4 className="text-cyan-400 font-semibold text-xs mb-1">🎮 Controls</h4>
+                      <ul className="text-xs text-slate-300 space-y-0">
+                        <li>• WASD/Arrows - Move</li>
+                        <li>• Q - Drop decoy</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="text-blue-400 font-semibold text-xs mb-1">🏃 Escaper</h4>
+                      <ul className="text-xs text-slate-300 space-y-0">
+                        <li>• Collect 15 coins</li>
+                        <li>• Drop decoys</li>
+                        <li>• Survive 90s</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="text-red-400 font-semibold text-xs mb-1">🎯 Hunter</h4>
+                      <ul className="text-xs text-slate-300 space-y-0">
+                        <li>• Follow footprints</li>
+                        <li>• Catch escaper</li>
+                        <li>• Score by time</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={onPlayAgain}
+                    className="w-full bg-cyan-700 hover:bg-cyan-600 text-white border-0 text-xs h-8"
                   >
-                    <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
-                  </div>
-                ) : scores && scores.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-slate-700">
-                        <TableHead className="text-slate-400 w-10">#</TableHead>
-                        <TableHead className="text-slate-400">Player</TableHead>
-                        <TableHead className="text-slate-400">Role</TableHead>
-                        <TableHead className="text-slate-400 text-right">
-                          Score
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {scores.slice(0, 10).map((entry, i) => (
-                        <TableRow
-                          key={`${entry.playerName}-${i}`}
-                          className="border-slate-700/50"
-                          data-ocid={`leaderboard.item.${i + 1}`}
-                        >
-                          <TableCell className="text-slate-500 font-mono text-sm">
-                            {i + 1}
-                          </TableCell>
-                          <TableCell className="text-white font-medium">
-                            {entry.playerName}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={
-                                entry.role === "escaper"
-                                  ? "border-blue-500/50 text-blue-400"
-                                  : "border-red-500/50 text-red-400"
-                              }
-                            >
-                              {entry.role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-mono font-bold text-yellow-400">
-                            {Number(entry.score).toLocaleString()}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div
-                    className="text-center py-8 text-slate-500"
-                    data-ocid="leaderboard.empty_state"
-                  >
-                    No scores yet. Be the first!
-                  </div>
-                )}
-                <Button
-                  data-ocid="gameover.play_again_button"
-                  onClick={onPlayAgain}
-                  className="w-full mt-4 bg-cyan-700 hover:bg-cyan-600 text-white border-0"
-                >
-                  Play Again
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="howtoplay">
-            <Card className="bg-slate-900/80 border-slate-700/60">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white text-base">How to Play</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-cyan-400 font-semibold mb-2">🎮 Controls</h3>
-                    <ul className="text-sm text-slate-300 space-y-1">
-                      <li>• <kbd className="bg-slate-700 px-2 py-1 rounded">WASD</kbd> or <kbd className="bg-slate-700 px-2 py-1 rounded">Arrow Keys</kbd> - Move your character</li>
-                      <li>• <kbd className="bg-slate-700 px-2 py-1 rounded">Q</kbd> - Drop decoy (Escaper only)</li>
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-blue-400 font-semibold mb-2">🏃 Escaper Role</h3>
-                    <ul className="text-sm text-slate-300 space-y-1">
-                      <li>• Collect all 15 coins to win instantly</li>
-                      <li>• Look for golden pulsing coins for bonus points (+25)</li>
-                      <li>• Drop decoys to mislead the hunter (5s duration)</li>
-                      <li>• Survive 90 seconds as an alternative win condition</li>
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-red-400 font-semibold mb-2">🎯 Hunter Role</h3>
-                    <ul className="text-sm text-slate-300 space-y-1">
-                      <li>• Follow the blue footprints left by the escaper</li>
-                      <li>• Catch the escaper to win</li>
-                      <li>• Be aware of decoys - they can distract you</li>
-                      <li>• Score based on time remaining when you catch them</li>
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-yellow-400 font-semibold mb-2">🪙 Scoring System</h3>
-                    <ul className="text-sm text-slate-300 space-y-1">
-                      <li>• Regular coin: 10 points</li>
-                      <li>• Bonus coin (golden with ★): 25 points</li>
-                      <li>• Hunter win: Time remaining × 10 points</li>
-                      <li>• Escaper survival bonus: Time remaining × 5 points</li>
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-green-400 font-semibold mb-2">💡 Tips</h3>
-                    <ul className="text-sm text-slate-300 space-y-1">
-                      <li>• Use decoys strategically to create escape routes</li>
-                      <li>• The hunter AI randomly targets decoys or moves unpredictably</li>
-                      <li>• Bonus coins change position every 8 seconds</li>
-                      <li>• Plan your path to collect coins efficiently</li>
-                    </ul>
-                  </div>
+                    Play Again
+                  </Button>
                 </div>
-                
-                <Button
-                  onClick={onPlayAgain}
-                  className="w-full mt-4 bg-cyan-700 hover:bg-cyan-600 text-white border-0"
-                >
-                  Play Again
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </TabsContent>
+            </Tabs>
+          </div>
+          
+          {/* Fixed Footer */}
+          <div className="px-6 py-3 border-t border-slate-600 flex-shrink-0">
+            <div className="flex justify-center gap-2">
+              <Button
+                onClick={onPlayAgain}
+                className="bg-blue-600 hover:bg-blue-500 text-white border-0 text-xs h-8"
+              >
+                <Play className="w-3 h-3 mr-1" />
+                Play Again
+              </Button>
+            </div>
+          </div>
+        </Card>
       </motion.div>
     </div>
   );
 }
-
-// ========================
 // APP
 // ========================
 export default function App() {
@@ -1642,6 +2184,7 @@ export default function App() {
   const [playerRole, setPlayerRole] = useState<Role>("escaper");
   const [playerName, setPlayerName] = useState("");
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
+  const [showSkipButton, setShowSkipButton] = useState(true);
 
   const handleStart = useCallback((role: Role, name: string) => {
     setPlayerRole(role);
@@ -1655,13 +2198,30 @@ export default function App() {
     setPhase("game_over");
   }, []);
 
+  const handleTourComplete = useCallback(() => {
+    setShowSkipButton(false);
+  }, []);
+
   const handlePlayAgain = useCallback(() => {
     setPhase("role_select");
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen w-full bg-slate-950 text-white overflow-hidden">
       <Toaster richColors position="top-right" />
+      
+      {/* Toggle Tour Button */}
+      {phase === "role_select" && (
+        <Button
+          onClick={() => setShowSkipButton(!showSkipButton)}
+          className="fixed top-4 right-4 z-50 bg-cyan-600 hover:bg-cyan-500 text-white border-0 shadow-lg"
+          size="sm"
+        >
+          <SkipForward className="w-4 h-4 mr-2" />
+          {showSkipButton ? "Skip Tour" : "Show Tour"}
+        </Button>
+      )}
+      
       <AnimatePresence mode="wait">
         {phase === "role_select" && (
           <motion.div
@@ -1669,8 +2229,9 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            className="min-h-screen w-full bg-slate-950 flex flex-col items-center justify-center"
           >
-            <RoleSelectScreen onStart={handleStart} />
+            <RoleSelectScreen onStart={handleStart} showTour={showSkipButton} onTourComplete={handleTourComplete} />
           </motion.div>
         )}
         {phase === "playing" && (
@@ -1679,7 +2240,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4"
+            className="min-h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-0"
           >
             <div className="mb-4 text-center">
               <h2 className="text-lg font-bold text-white">

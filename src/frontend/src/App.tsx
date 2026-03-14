@@ -93,12 +93,12 @@ const MAPS: number[][][] = [
     [1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   ],
-  // Level 3 - Cross pattern with quadrants
+  // Level 3 - Cross pattern with quadrants (fixed for connectivity)
   [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
     [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
     [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
@@ -107,9 +107,11 @@ const MAPS: number[][][] = [
     [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
     [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
     [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
     [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
     [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   ],
   // Level 4 - Diamond pattern with diagonal paths
   [
@@ -149,6 +151,207 @@ const MAPS: number[][][] = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
   ],
 ];
+
+// Generate additional levels automatically for higher levels
+function generatePlayableLevel(levelNumber: number): number[][] {
+  const map: number[][] = Array(MAP_ROWS).fill(null).map(() => Array(MAP_COLS).fill(1));
+
+  // Create a guaranteed path from top-left to bottom-right
+  const createPath = (startX: number, startY: number, endX: number, endY: number) => {
+    let currentX = startX;
+    let currentY = startY;
+
+    while (currentX !== endX || currentY !== endY) {
+      map[currentY][currentX] = 0; // Clear path
+
+      // Smart pathfinding towards target with better corridor creation
+      const dx = endX - currentX;
+      const dy = endY - currentY;
+      
+      // Create wider corridors for better movement
+      const corridorWidth = Math.min(2, 1 + Math.floor(levelNumber / 3));
+      
+      if (Math.random() < 0.8) { // 80% chance to move towards target
+        if (Math.abs(dx) > Math.abs(dy)) {
+          // Move horizontally with corridor
+          for (let w = 0; w < corridorWidth; w++) {
+            const y = Math.max(1, Math.min(MAP_ROWS - 2, currentY + w - Math.floor(corridorWidth / 2)));
+            if (y >= 1 && y < MAP_ROWS - 1) {
+              map[y][currentX] = 0;
+            }
+          }
+          currentX += dx > 0 ? 1 : -1;
+        } else {
+          // Move vertically with corridor
+          for (let w = 0; w < corridorWidth; w++) {
+            const x = Math.max(1, Math.min(MAP_COLS - 2, currentX + w - Math.floor(corridorWidth / 2)));
+            if (x >= 1 && x < MAP_COLS - 1) {
+              map[currentY][x] = 0;
+            }
+          }
+          currentY += dy > 0 ? 1 : -1;
+        }
+      } else { // 20% chance for strategic exploration
+        const dir = Math.floor(Math.random() * 4);
+        switch (dir) {
+          case 0: 
+            if (currentY > 1) {
+              for (let w = 0; w < corridorWidth; w++) {
+                const x = Math.max(1, Math.min(MAP_COLS - 2, currentX + w - Math.floor(corridorWidth / 2)));
+                if (x >= 1 && x < MAP_COLS - 1) {
+                  map[currentY - 1][x] = 0;
+                }
+              }
+              currentY--;
+            }
+            break;
+          case 1: 
+            if (currentX < MAP_COLS - 2) {
+              for (let w = 0; w < corridorWidth; w++) {
+                const y = Math.max(1, Math.min(MAP_ROWS - 2, currentY + w - Math.floor(corridorWidth / 2)));
+                if (y >= 1 && y < MAP_ROWS - 1) {
+                  map[y][currentX + 1] = 0;
+                }
+              }
+              currentX++;
+            }
+            break;
+          case 2: 
+            if (currentY < MAP_ROWS - 2) {
+              for (let w = 0; w < corridorWidth; w++) {
+                const x = Math.max(1, Math.min(MAP_COLS - 2, currentX + w - Math.floor(corridorWidth / 2)));
+                if (x >= 1 && x < MAP_COLS - 1) {
+                  map[currentY + 1][x] = 0;
+                }
+              }
+              currentY++;
+            }
+            break;
+          case 3: 
+            if (currentX > 1) {
+              for (let w = 0; w < corridorWidth; w++) {
+                const y = Math.max(1, Math.min(MAP_ROWS - 2, currentY + w - Math.floor(corridorWidth / 2)));
+                if (y >= 1 && y < MAP_ROWS - 1) {
+                  map[y][currentX - 1] = 0;
+                }
+              }
+              currentX--;
+            }
+            break;
+        }
+      }
+      
+      // Keep within bounds
+      currentX = Math.max(1, Math.min(MAP_COLS - 2, currentX));
+      currentY = Math.max(1, Math.min(MAP_ROWS - 2, currentY));
+    }
+    map[endY][endX] = 0; // Ensure end is clear
+  };
+
+  // Create main paths with better connectivity and wider corridors
+  createPath(1, 1, MAP_COLS - 2, MAP_ROWS - 2);
+  createPath(1, MAP_ROWS - 2, MAP_COLS - 2, 1);
+  createPath(1, 1, MAP_COLS - 2, 1);
+  createPath(1, 1, 1, MAP_ROWS - 2);
+  createPath(MAP_COLS - 2, 1, MAP_COLS - 2, MAP_ROWS - 2);
+  
+  // Create additional connecting paths for better flow
+  for (let i = 0; i < 8 + levelNumber; i++) {
+    const x1 = Math.floor(Math.random() * (MAP_COLS - 6)) + 3;
+    const y1 = Math.floor(Math.random() * (MAP_ROWS - 6)) + 3;
+    const x2 = Math.floor(Math.random() * (MAP_COLS - 6)) + 3;
+    const y2 = Math.floor(Math.random() * (MAP_ROWS - 6)) + 3;
+    createPath(x1, y1, x2, y2);
+  }
+
+  // Create larger open areas for better movement
+  const createRoom = (centerX: number, centerY: number, width: number, height: number) => {
+    for (let y = Math.max(1, centerY - height); y <= Math.min(MAP_ROWS - 2, centerY + height); y++) {
+      for (let x = Math.max(1, centerX - width); x <= Math.min(MAP_COLS - 2, centerX + width); x++) {
+        map[y][x] = 0;
+      }
+    }
+  };
+
+  // Add strategic rooms with better sizing
+  const roomSize = Math.min(4, 2 + Math.floor(levelNumber / 2));
+  createRoom(5, 5, roomSize, roomSize);
+  createRoom(MAP_COLS - 5, 5, roomSize, roomSize);
+  createRoom(5, MAP_ROWS - 5, roomSize, roomSize);
+  createRoom(MAP_COLS - 5, MAP_ROWS - 5, roomSize, roomSize);
+  createRoom(Math.floor(MAP_COLS / 2), Math.floor(MAP_ROWS / 2), roomSize + 1, roomSize);
+  
+  // Add some random open areas for variety
+  for (let i = 0; i < 3 + Math.floor(levelNumber / 2); i++) {
+    const roomX = Math.floor(Math.random() * (MAP_COLS - 8)) + 4;
+    const roomY = Math.floor(Math.random() * (MAP_ROWS - 8)) + 4;
+    const roomW = Math.floor(Math.random() * 3) + 2;
+    const roomH = Math.floor(Math.random() * 3) + 2;
+    createRoom(roomX, roomY, roomW, roomH);
+  }
+
+  // Ensure borders are walls
+  for (let i = 0; i < MAP_COLS; i++) {
+    map[0][i] = 1;
+    map[MAP_ROWS - 1][i] = 1;
+  }
+  for (let i = 0; i < MAP_ROWS; i++) {
+    map[i][0] = 1;
+    map[i][MAP_COLS - 1] = 1;
+  }
+
+  // Verify map accessibility and fix if needed
+  if (!verifyMapAccessibility(map)) {
+    // Add emergency grid paths if map is not fully accessible
+    for (let y = 2; y < MAP_ROWS - 2; y += 2) {
+      for (let x = 2; x < MAP_COLS - 2; x += 2) {
+        map[y][x] = 0;
+      }
+    }
+  }
+
+  return map;
+}
+
+// Verify that all accessible areas are connected
+function verifyMapAccessibility(map: number[][]): boolean {
+  const accessibleTiles: {col: number, row: number}[] = [];
+  
+  // Find all accessible tiles
+  for (let r = 1; r < MAP_ROWS - 1; r++) {
+    for (let c = 1; c < MAP_COLS - 1; c++) {
+      if (map[r][c] === 0) {
+        accessibleTiles.push({ col: c, row: r });
+      }
+    }
+  }
+  
+  if (accessibleTiles.length === 0) return false;
+  
+  // BFS from first accessible tile
+  const queue = [accessibleTiles[0]];
+  const visited = new Set<string>();
+  visited.add(`${accessibleTiles[0].col},${accessibleTiles[0].row}`);
+  
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    
+    for (const tile of accessibleTiles) {
+      const key = `${tile.col},${tile.row}`;
+      if (!visited.has(key) && 
+          Math.abs(current.col - tile.col) <= 1 && 
+          Math.abs(current.row - tile.row) <= 1) {
+        visited.add(key);
+        queue.push(tile);
+      }
+    }
+  }
+  
+  // Check if all accessible tiles are reachable
+  return visited.size === accessibleTiles.length;
+}
+
+MAPS.push(...Array(10).fill(null).map((_, i) => generatePlayableLevel(i + 3)));
 
 // Get current map based on level
 function getCurrentMap(level: number): number[][] {
@@ -227,6 +430,7 @@ interface GameState {
   cumulativeScore: number;
   livesRemaining: number; // Escaper lives system
   respawnTimer: number; // 5-second respawn timer
+  respawnGraceTimer: number; // Grace period after respawn to prevent immediate re-catch
 }
 
 // ========================
@@ -246,15 +450,26 @@ function isWall(col: number, row: number, level: number = 1): boolean {
 }
 
 function isWallAt(x: number, y: number, level: number = 1): boolean {
-  const r = PLAYER_RADIUS - 3;
-  return [
+  const r = PLAYER_RADIUS - 1; // Even smaller radius for smooth movement
+  const checkPoints = [
     { x: x - r, y: y - r },
     { x: x + r, y: y - r },
     { x: x - r, y: y + r },
     { x: x + r, y: y + r },
-  ].some((c) =>
-    isWall(Math.floor(c.x / TILE_SIZE), Math.floor(c.y / TILE_SIZE), level),
-  );
+    // Add diagonal checks for better corner detection
+    { x: x - r * 0.7, y: y - r * 0.7 },
+    { x: x + r * 0.7, y: y - r * 0.7 },
+    { x: x - r * 0.7, y: y + r * 0.7 },
+    { x: x + r * 0.7, y: y + r * 0.7 },
+    // Center point
+    { x: x, y: y }
+  ];
+  
+  return checkPoints.some((c) => {
+    const col = Math.floor(c.x / TILE_SIZE);
+    const row = Math.floor(c.y / TILE_SIZE);
+    return isWall(col, row, level);
+  });
 }
 
 function vecDist(a: Vec2, b: Vec2): number {
@@ -270,6 +485,108 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a;
 }
 
+// Find valid spawn points for entities
+function findValidSpawnPoint(level: number, excludePoints: Vec2[] = []): Vec2 {
+  const currentMap = getCurrentMap(level);
+  const floorTiles: Vec2[] = [];
+  
+  for (let r = 0; r < MAP_ROWS; r++) {
+    for (let c = 0; c < MAP_COLS; c++) {
+      if (currentMap[r][c] === 0) {
+        const tilePos = tileCenter(c, r);
+        // Check if this position is valid (not in walls and not too close to excluded points)
+        if (!isWallAt(tilePos.x, tilePos.y, level)) {
+          const tooClose = excludePoints.some(point => vecDist(tilePos, point) < TILE_SIZE * 2);
+          if (!tooClose) {
+            // Check if this tile has good connectivity to other areas
+            const hasGoodConnectivity = checkTileConnectivity(c, r, currentMap);
+            if (hasGoodConnectivity) {
+              floorTiles.push(tilePos);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // Return a random valid position, or fallback to (1,1) if none found
+  if (floorTiles.length > 0) {
+    return floorTiles[Math.floor(Math.random() * floorTiles.length)];
+  }
+  return tileCenter(1, 1);
+}
+
+// Check if a tile has good connectivity to other areas
+function checkTileConnectivity(col: number, row: number, map: number[][]): boolean {
+  const directions = [
+    { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, 
+    { dx: 0, dy: 1 }, { dx: -1, dy: 0 }
+  ];
+  
+  let openNeighbors = 0;
+  for (const dir of directions) {
+    const newCol = col + dir.dx;
+    const newRow = row + dir.dy;
+    if (newCol >= 0 && newCol < MAP_COLS && newRow >= 0 && newRow < MAP_ROWS) {
+      if (map[newRow][newCol] === 0) {
+        openNeighbors++;
+      }
+    }
+  }
+  
+  // Prefer tiles with at least 2 open neighbors for better movement
+  return openNeighbors >= 2;
+}
+
+// Check if there's a path between two points using BFS
+function isPathAccessible(start: Vec2, end: Vec2, map: number[][]): boolean {
+  const startTile = {
+    col: Math.floor(start.x / TILE_SIZE),
+    row: Math.floor(start.y / TILE_SIZE)
+  };
+  const endTile = {
+    col: Math.floor(end.x / TILE_SIZE),
+    row: Math.floor(end.y / TILE_SIZE)
+  };
+  
+  // If start or end is in a wall, return false
+  if (map[startTile.row][startTile.col] === 1 || map[endTile.row][endTile.col] === 1) {
+    return false;
+  }
+  
+  // BFS to find path
+  const queue: {col: number, row: number}[] = [startTile];
+  const visited = new Set<string>();
+  visited.add(`${startTile.col},${startTile.row}`);
+  
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    
+    if (current.col === endTile.col && current.row === endTile.row) {
+      return true; // Path found
+    }
+    
+    const directions = [
+      { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, 
+      { dx: 0, dy: 1 }, { dx: -1, dy: 0 }
+    ];
+    
+    for (const dir of directions) {
+      const newCol = current.col + dir.dx;
+      const newRow = current.row + dir.dy;
+      const key = `${newCol},${newRow}`;
+      
+      if (newCol >= 0 && newCol < MAP_COLS && newRow >= 0 && newRow < MAP_ROWS &&
+          !visited.has(key) && map[newRow][newCol] === 0) {
+        visited.add(key);
+        queue.push({ col: newCol, row: newRow });
+      }
+    }
+  }
+  
+  return false; // No path found
+}
+
 function createInitialGameState(level: number = 1, totalLevels: number = 3): GameState {
   const currentMap = getCurrentMap(level);
   const floorTiles: Vec2[] = [];
@@ -278,13 +595,10 @@ function createInitialGameState(level: number = 1, totalLevels: number = 3): Gam
       if (currentMap[r][c] === 0) floorTiles.push(tileCenter(c, r));
     }
   }
-  const escaperSpawn = tileCenter(1, 1);
-  const hunterSpawn = tileCenter(18, 13);
-  const coinCandidates = floorTiles.filter(
-    (t) =>
-      vecDist(t, escaperSpawn) > TILE_SIZE * 2.5 &&
-      vecDist(t, hunterSpawn) > TILE_SIZE * 2.5,
-  );
+  
+  // Find valid spawn points for both players
+  const escaperSpawn = findValidSpawnPoint(level, []);
+  const hunterSpawn = findValidSpawnPoint(level, [escaperSpawn]);
   
   // Level-specific difficulty adjustments
   const levelMultiplier = 1 + (level - 1) * 0.2; // 20% harder each level
@@ -292,6 +606,45 @@ function createInitialGameState(level: number = 1, totalLevels: number = 3): Gam
   const adjustedGameDuration = Math.max(GAME_DURATION - (level - 1) * 10, 60); // Less time each level
   const adjustedAI_SPEED = Math.min(AI_SPEED + (level - 1) * 10, 180); // Faster AI each level
   const adjustedMAX_DECOYS = Math.max(MAX_DECOYS - Math.floor((level - 1) * 0.5), 1); // Fewer decoys each level
+  
+  // Filter coin candidates to ensure accessibility from both spawn points
+  const coinCandidates = floorTiles.filter((t) => {
+    // Check distance from spawn points
+    const farEnoughFromSpawns = 
+      vecDist(t, escaperSpawn) > TILE_SIZE * 2.5 &&
+      vecDist(t, hunterSpawn) > TILE_SIZE * 2.5;
+    
+    if (!farEnoughFromSpawns) return false;
+    
+    // Check if coin is accessible from both escaper and hunter positions
+    const accessibleFromEscaper = isPathAccessible(escaperSpawn, t, currentMap);
+    const accessibleFromHunter = isPathAccessible(hunterSpawn, t, currentMap);
+    
+    return accessibleFromEscaper && accessibleFromHunter;
+  });
+  
+  // Ensure we have enough accessible coin positions
+  const minRequiredCoins = Math.min(adjustedNumCoins, coinCandidates.length);
+  if (coinCandidates.length < adjustedNumCoins) {
+    // If not enough accessible coins, add more by clearing additional paths
+    console.warn(`Level ${level}: Only ${coinCandidates.length} accessible coins found, need ${adjustedNumCoins}. Adding emergency paths.`);
+    
+    // Add emergency paths to ensure coin accessibility
+    for (let attempts = 0; attempts < 10 && coinCandidates.length < adjustedNumCoins; attempts++) {
+      const randomCol = Math.floor(Math.random() * (MAP_COLS - 4)) + 2;
+      const randomRow = Math.floor(Math.random() * (MAP_ROWS - 4)) + 2;
+      const potentialPos = tileCenter(randomCol, randomRow);
+      
+      if (!isWallAt(potentialPos.x, potentialPos.y, level)) {
+        const accessibleFromEscaper = isPathAccessible(escaperSpawn, potentialPos, currentMap);
+        const accessibleFromHunter = isPathAccessible(hunterSpawn, potentialPos, currentMap);
+        
+        if (accessibleFromEscaper && accessibleFromHunter) {
+          coinCandidates.push(potentialPos);
+        }
+      }
+    }
+  }
   
   const coins: Coin[] = shuffleArray(coinCandidates)
     .slice(0, adjustedNumCoins)
@@ -328,6 +681,7 @@ function createInitialGameState(level: number = 1, totalLevels: number = 3): Gam
     cumulativeScore: 0,
     livesRemaining: 3, // Start with 3 lives
     respawnTimer: 0, // Initialize respawn timer
+    respawnGraceTimer: 0, // Initialize respawn grace timer
   };
 }
 
@@ -335,10 +689,60 @@ function createInitialGameState(level: number = 1, totalLevels: number = 3): Gam
 // GAME LOGIC
 // ========================
 function moveEntity(entity: Entity, dx: number, dy: number, level: number = 1): void {
+  const originalX = entity.pos.x;
+  const originalY = entity.pos.y;
   const nx = entity.pos.x + dx;
   const ny = entity.pos.y + dy;
-  if (!isWallAt(nx, entity.pos.y, level)) entity.pos.x = nx;
-  if (!isWallAt(entity.pos.x, ny, level)) entity.pos.y = ny;
+  
+  // Try full movement first
+  if (!isWallAt(nx, ny, level)) {
+    entity.pos.x = nx;
+    entity.pos.y = ny;
+    return;
+  }
+  
+  // Try horizontal only
+  if (!isWallAt(nx, originalY, level)) {
+    entity.pos.x = nx;
+    return;
+  }
+  
+  // Try vertical only
+  if (!isWallAt(originalX, ny, level)) {
+    entity.pos.y = ny;
+    return;
+  }
+  
+  // Try smaller steps (for getting out of tight spaces)
+  const stepSize = 0.5;
+  const steps = Math.max(Math.abs(dx), Math.abs(dy)) / stepSize;
+  
+  for (let i = 1; i <= steps; i++) {
+    const stepX = originalX + (dx * i / steps);
+    const stepY = originalY + (dy * i / steps);
+    
+    if (!isWallAt(stepX, stepY, level)) {
+      entity.pos.x = stepX;
+      entity.pos.y = stepY;
+      break;
+    }
+    
+    // Try just horizontal movement at this step
+    if (!isWallAt(stepX, originalY, level)) {
+      entity.pos.x = stepX;
+      break;
+    }
+    
+    // Try just vertical movement at this step
+    if (!isWallAt(originalX, stepY, level)) {
+      entity.pos.y = stepY;
+      break;
+    }
+  }
+  
+  // Ensure entity stays within bounds
+  entity.pos.x = Math.max(PLAYER_RADIUS, Math.min(CANVAS_W - PLAYER_RADIUS, entity.pos.x));
+  entity.pos.y = Math.max(PLAYER_RADIUS, Math.min(CANVAS_H - PLAYER_RADIUS, entity.pos.y));
 }
 
 function updatePlayerMovement(
@@ -374,158 +778,168 @@ function updateAIHunter(gs: GameState, dt: number): void {
   if (gs.hunterTargetTimer <= 0) {
     gs.hunterTargetTimer = Math.max(AI_LAG_INTERVAL - (gs.currentLevel - 1) * 100, 300);
     
-    // Check for blocks in all directions
-    const hunterTile = {
-      col: Math.floor(gs.hunter.pos.x / TILE_SIZE),
-      row: Math.floor(gs.hunter.pos.y / TILE_SIZE)
-    };
-    const currentMap = getCurrentMap(gs.currentLevel);
+    // Find best target using intelligent pathfinding
+    let bestTarget = { ...gs.escaper.pos };
+    let bestTargetScore = -Infinity;
     
-    // Check if hunter is blocked in any direction
-    const blockedDirections = {
-      up: isWall(hunterTile.col, hunterTile.row - 1, gs.currentLevel),
-      down: isWall(hunterTile.col, hunterTile.row + 1, gs.currentLevel),
-      left: isWall(hunterTile.col - 1, hunterTile.row, gs.currentLevel),
-      right: isWall(hunterTile.col + 1, hunterTile.row, gs.currentLevel)
-    };
+    // Consider decoys as potential targets
+    const allTargets = [
+      { pos: gs.escaper.pos, type: 'escaper', priority: 100 },
+      ...gs.decoys.map(decoy => ({ pos: { x: decoy.x, y: decoy.y }, type: 'decoy', priority: 60 }))
+    ];
     
-    // If hunter is blocked, immediately target escaper with aggressive pursuit
-    if (blockedDirections.up || blockedDirections.down || blockedDirections.left || blockedDirections.right) {
-      gs.hunterTarget = { ...gs.escaper.pos };
-      gs.hunterTargetTimer = 200; // Faster reaction when blocked
-      return;
-    }
-    
-    // Intelligent hunting strategies
-    const distance = vecDist(gs.hunter.pos, gs.escaper.pos);
-    
-    // Analyze escaper movement patterns
-    const recentFootprints = gs.footprints.slice(-3); // Last 3 footprints
-    let predictedPos = { ...gs.escaper.pos };
-    
-    if (recentFootprints.length >= 2) {
-      // Predict escaper's next position based on movement
-      const fp1 = recentFootprints[0];
-      const fp2 = recentFootprints[recentFootprints.length - 1];
-      const dx = fp2.x - fp1.x;
-      const dy = fp2.y - fp1.y;
-      const timeDiff = fp2.timestamp - fp1.timestamp;
+    for (const target of allTargets) {
+      // Calculate path-based score
+      const pathDistance = calculatePathDistance(gs.hunter.pos, target.pos, gs.currentLevel);
+      const directDistance = vecDist(gs.hunter.pos, target.pos);
       
-      if (timeDiff > 0) {
-        const velX = (dx / timeDiff) * 1000; // pixels per second
-        const velY = (dy / timeDiff) * 1000;
-        const predictionTime = 500; // Predict 500ms ahead
-        predictedPos = {
-          x: gs.escaper.pos.x + velX * predictionTime / 1000,
-          y: gs.escaper.pos.y + velY * predictionTime / 1000
-        };
+      // Score based on path efficiency and priority
+      const pathEfficiency = directDistance / Math.max(pathDistance, 1);
+      const score = (target.priority * pathEfficiency) - (pathDistance * 0.5);
+      
+      if (score > bestTargetScore) {
+        bestTargetScore = score;
+        bestTarget = target.pos;
       }
     }
     
-    // Consider decoys vs escaper priority
-    const decoyChance = Math.max(0.7 - (gs.currentLevel - 1) * 0.1, 0.3);
+    gs.hunterTarget = bestTarget;
     
-    if (gs.decoys.length > 0 && Math.random() < decoyChance && distance > 100) {
-      // Check if decoys are strategically placed
-      let bestDecoy: Decoy | null = null;
-      let bestDecoyScore = -Infinity;
-      
-      for (const decoy of gs.decoys) {
-        const decoyDist = vecDist(gs.hunter.pos, decoy);
-        const escaperToDecoyDist = vecDist(gs.escaper.pos, decoy);
-        
-        // Score decoys based on proximity to escaper path and distance from us
-        const score = (200 - decoyDist) + (escaperToDecoyDist * 0.3);
-        if (score > bestDecoyScore) {
-          bestDecoyScore = score;
-          bestDecoy = decoy;
-        }
-      }
-      
-      if (bestDecoy) {
-        gs.hunterTarget = { x: bestDecoy.x, y: bestDecoy.y };
-        gs.hunterDistractTimer = 3000; // Shorter distraction on higher levels
-      } else {
-        gs.hunterTarget = { ...predictedPos };
-      }
-    } else {
-      // Hunt escaper intelligently
-      
-      // Check for choke points and ambush opportunities
-      const escaperTile = {
-        col: Math.floor(gs.escaper.pos.x / TILE_SIZE),
-        row: Math.floor(gs.escaper.pos.y / TILE_SIZE)
-      };
-      
-      // Try to find interception point
-      let interceptPoint = { ...predictedPos };
-      
-      if (distance < 200) {
-        // Close range - direct pursuit with prediction
-        interceptPoint = predictedPos;
-      } else {
-        // Long range - anticipate escaper's likely path
-        const availableCoins = gs.coins.filter(c => !c.collected);
-        
-        if (availableCoins.length > 0) {
-          // Predict which coin escaper will go for
-          let targetCoin: Coin | null = null;
-          let minHeuristic = Infinity;
-          
-          for (const coin of availableCoins) {
-            const distToEscaper = vecDist(gs.escaper.pos, coin);
-            const distToHunter = vecDist(gs.hunter.pos, coin);
-            const timeForEscaper = distToEscaper / (PLAYER_SPEED * 0.88);
-            const timeForHunter = distToHunter / currentAISpeed;
-            
-            // Can we intercept?
-            if (timeForHunter < timeForEscaper * 1.2) {
-              const heuristic = distToEscaper + (distToHunter * 0.5);
-              if (heuristic < minHeuristic) {
-                minHeuristic = heuristic;
-                targetCoin = coin;
-              }
-            }
-          }
-          
-          if (targetCoin) {
-            interceptPoint = { x: targetCoin.x, y: targetCoin.y };
-          } else {
-            interceptPoint = predictedPos;
-          }
-        } else {
-          interceptPoint = predictedPos;
-        }
-      }
-      
-      gs.hunterTarget = interceptPoint;
-    }
-  }
-  
-  // If distracted but target decoy no longer exists, chase escaper
-  if (gs.hunterDistractTimer > 0) {
-    const targetIsDecoy = gs.decoys.some(
-      (d) => d.x === gs.hunterTarget.x && d.y === gs.hunterTarget.y,
+    // Set distraction timer if targeting decoy
+    const isDecoyTarget = gs.decoys.some(decoy => 
+      Math.abs(decoy.x - gs.hunterTarget.x) < 5 && 
+      Math.abs(decoy.y - gs.hunterTarget.y) < 5
     );
-    if (!targetIsDecoy) {
-      gs.hunterDistractTimer = 0;
-      gs.hunterTarget = { ...gs.escaper.pos };
+    
+    if (isDecoyTarget) {
+      gs.hunterDistractTimer = Math.max(2000, 4000 - (gs.currentLevel - 1) * 200);
     }
   }
   
+  // Move hunter towards target with smart pathfinding
   const dx = gs.hunterTarget.x - gs.hunter.pos.x;
   const dy = gs.hunterTarget.y - gs.hunter.pos.y;
-  const d = Math.sqrt(dx * dx + dy * dy);
+  const distance = Math.sqrt(dx * dx + dy * dy);
   
-  if (d > 2) {
-    const s = currentAISpeed * dt;
-    gs.hunter.dir = Math.atan2(dy, dx);
-    moveEntity(gs.hunter, (dx / d) * s, (dy / d) * s, gs.currentLevel);
+  if (distance > 1) {
+    // Use pathfinding for movement
+    const nextStep = getNextStepTowards(gs.hunter.pos, gs.hunterTarget, gs.currentLevel);
+    if (nextStep) {
+      const moveX = nextStep.x - gs.hunter.pos.x;
+      const moveY = nextStep.y - gs.hunter.pos.y;
+      const moveDistance = Math.sqrt(moveX * moveX + moveY * moveY);
+      
+      // Normalize and apply speed
+      const normalizedX = (moveX / moveDistance) * currentAISpeed * dt;
+      const normalizedY = (moveY / moveDistance) * currentAISpeed * dt;
+      
+      gs.hunter.dir = Math.atan2(normalizedY, normalizedX);
+      moveEntity(gs.hunter, normalizedX, normalizedY, gs.currentLevel);
+    }
   }
+}
+
+// Calculate actual path distance using BFS
+function calculatePathDistance(start: Vec2, end: Vec2, level: number): number {
+  const startTile = {
+    col: Math.floor(start.x / TILE_SIZE),
+    row: Math.floor(start.y / TILE_SIZE)
+  };
+  const endTile = {
+    col: Math.floor(end.x / TILE_SIZE),
+    row: Math.floor(end.y / TILE_SIZE)
+  };
+  
+  const currentMap = getCurrentMap(level);
+  type QueueItem = {col: number, row: number, dist: number};
+  const queue: QueueItem[] = [{...startTile, dist: 0}];
+  const visited = new Set<string>();
+  visited.add(`${startTile.col},${startTile.row}`);
+  
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    
+    if (current.col === endTile.col && current.row === endTile.row) {
+      return current.dist;
+    }
+    
+    const directions = [
+      { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, 
+      { dx: 0, dy: 1 }, { dx: -1, dy: 0 }
+    ];
+    
+    for (const dir of directions) {
+      const newCol = current.col + dir.dx;
+      const newRow = current.row + dir.dy;
+      const key = `${newCol},${newRow}`;
+      
+      if (newCol >= 0 && newCol < MAP_COLS && newRow >= 0 && newRow < MAP_ROWS &&
+          !visited.has(key) && currentMap[newRow][newCol] === 0) {
+        visited.add(key);
+        queue.push({ col: newCol, row: newRow, dist: current.dist + 1 });
+      }
+    }
+  }
+  
+  return vecDist(start, end); // Fallback to direct distance
+}
+
+// Get next step towards target using pathfinding
+function getNextStepTowards(start: Vec2, target: Vec2, level: number): Vec2 | null {
+  const startTile = {
+    col: Math.floor(start.x / TILE_SIZE),
+    row: Math.floor(start.y / TILE_SIZE)
+  };
+  const targetTile = {
+    col: Math.floor(target.x / TILE_SIZE),
+    row: Math.floor(target.y / TILE_SIZE)
+  };
+  
+  const currentMap = getCurrentMap(level);
+  type PathItem = {col: number, row: number, path: {col: number, row: number}[]};
+  const queue: PathItem[] = [{...startTile, path: [{...startTile}]}];
+  const visited = new Set<string>();
+  visited.add(`${startTile.col},${startTile.row}`);
+  
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    
+    if (current.col === targetTile.col && current.row === targetTile.row) {
+      // Found path, return next step after start
+      if (current.path.length > 1) {
+        return tileCenter(current.path[1].col, current.path[1].row);
+      }
+      break;
+    }
+    
+    const directions = [
+      { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, 
+      { dx: 0, dy: 1 }, { dx: -1, dy: 0 }
+    ];
+    
+    for (const dir of directions) {
+      const newCol = current.col + dir.dx;
+      const newRow = current.row + dir.dy;
+      const key = `${newCol},${newRow}`;
+      
+      if (newCol >= 0 && newCol < MAP_COLS && newRow >= 0 && newRow < MAP_ROWS &&
+          !visited.has(key) && currentMap[newRow][newCol] === 0) {
+        visited.add(key);
+        queue.push({ 
+          col: newCol, 
+          row: newRow, 
+          path: [...current.path, {col: newCol, row: newRow}] 
+        });
+      }
+    }
+  }
+  
+  return null; // No path found
 }
 
 function updateAIEscaper(gs: GameState, dt: number): void {
   gs.escaperAITimer -= dt * 1000;
+  // ... (rest of the code remains the same)
   if (gs.escaperAITimer <= 0) {
     gs.escaperAITimer = 400; // React faster on higher levels
     
@@ -642,15 +1056,63 @@ function updateGame(
   if (gs.status === "respawning") {
     gs.respawnTimer -= dt * 1000;
     if (gs.respawnTimer <= 0) {
-      // Respawn escaper
+      // Find valid respawn point for escaper that ensures access to remaining coins
+      const remainingCoins = gs.coins.filter(c => !c.collected);
+      let bestRespawnPoint: Vec2 | null = null;
+      let bestScore = -Infinity;
+      
+      // Find respawn point with best access to remaining coins
       const currentMap = getCurrentMap(gs.currentLevel);
-      const escaperSpawn = tileCenter(1, 1);
-      gs.escaper.pos = { ...escaperSpawn };
+      for (let r = 1; r < MAP_ROWS - 1; r++) {
+        for (let c = 1; c < MAP_COLS - 1; c++) {
+          if (currentMap[r][c] === 0) {
+            const potentialPos = tileCenter(c, r);
+            
+            // Check if this position is valid
+            if (!isWallAt(potentialPos.x, potentialPos.y, gs.currentLevel)) {
+              // Calculate total path distance to all remaining coins
+              let totalPathDistance = 0;
+              let accessibleCoins = 0;
+              
+              for (const coin of remainingCoins) {
+                const pathDist = calculatePathDistance(potentialPos, coin, gs.currentLevel);
+                if (pathDist < Infinity) { // Path exists
+                  totalPathDistance += pathDist;
+                  accessibleCoins++;
+                }
+              }
+              
+              // Score based on accessibility and distance from hunter
+              const hunterDist = vecDist(potentialPos, gs.hunter.pos);
+              const distanceFromHunter = Math.max(0, hunterDist - TILE_SIZE * 3); // Prefer distance from hunter
+              const score = (accessibleCoins * 100) - totalPathDistance + distanceFromHunter;
+              
+              if (score > bestScore) {
+                bestScore = score;
+                bestRespawnPoint = potentialPos;
+              }
+            }
+          }
+        }
+      }
+      
+      // Fallback to original method if no optimal point found
+      if (!bestRespawnPoint) {
+        bestRespawnPoint = findValidSpawnPoint(gs.currentLevel, [gs.hunter.pos]);
+      }
+      
+      gs.escaper.pos = { ...bestRespawnPoint };
       gs.escaper.dir = 0;
       gs.status = "playing";
       gs.respawnTimer = 0;
+      gs.respawnGraceTimer = 2; // 2 second grace period after respawn
     }
-    return;
+    return; // Don't update game while respawning
+  }
+  
+  // Update respawn grace timer
+  if (gs.respawnGraceTimer > 0) {
+    gs.respawnGraceTimer -= dt;
   }
   
   gs.timeRemaining -= dt;
@@ -738,8 +1200,8 @@ function updateGame(
     }
     return;
   }
-  // Catch detection
-  if (vecDist(gs.escaper.pos, gs.hunter.pos) < CATCH_DISTANCE) {
+  // Catch detection (only if not in grace period)
+  if (gs.respawnGraceTimer <= 0 && vecDist(gs.escaper.pos, gs.hunter.pos) < CATCH_DISTANCE) {
     if (playerRole === "escaper") {
       // Escaper caught - lose a life
       gs.livesRemaining--;
@@ -756,6 +1218,7 @@ function updateGame(
         // Start respawn timer
         gs.status = "respawning";
         gs.respawnTimer = 5; // 5 seconds to respawn
+        gs.respawnGraceTimer = 0; // Reset grace timer
       }
     } else {
       // Hunter wins - game over immediately
@@ -1093,6 +1556,12 @@ function renderGame(ctx: CanvasRenderingContext2D, gs: GameState): void {
     ctx.fillStyle = '#f59e0b';
     ctx.textAlign = 'center';
     ctx.fillText(`Respawning in ${Math.ceil(gs.respawnTimer)}...`, CANVAS_W / 2, CANVAS_H / 2);
+  } else if (gs.respawnGraceTimer > 0) {
+    // Show grace period indicator
+    ctx.font = 'bold 16px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#10b981';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Grace Period: ${Math.ceil(gs.respawnGraceTimer)}s`, CANVAS_W / 2, 50);
   }
   
   ctx.textAlign = 'left';

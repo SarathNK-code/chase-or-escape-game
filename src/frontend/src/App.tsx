@@ -932,11 +932,11 @@ interface RoleSelectProps {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
-          className="relative z-10 w-full max-w-2xl"
+          className="relative z-10 w-full max-w-2xl h-[600px] flex flex-col"
         >
-          <Card className="bg-slate-800 border border-slate-600 shadow-2xl">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-600">
+          <Card className="bg-slate-800 border border-slate-600 shadow-2xl flex flex-col h-full">
+            {/* Fixed Header */}
+            <div className="px-6 py-4 border-b border-slate-600 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
@@ -960,13 +960,13 @@ interface RoleSelectProps {
               </div>
             </div>
             
-            {/* Content */}
-            <div className="px-6 py-8">
+            {/* Scrollable Content Area */}
+            <div className="flex-1 overflow-y-auto px-6 py-8">
               {tourSteps[tourStep].content}
             </div>
             
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-slate-600">
+            {/* Fixed Footer */}
+            <div className="px-6 py-4 border-t border-slate-600 flex-shrink-0">
               {/* Progress Indicators */}
               <div className="flex justify-center gap-2 mb-4">
                 {tourSteps.map((_, index) => (
@@ -985,7 +985,7 @@ interface RoleSelectProps {
                 ))}
               </div>
               
-              {/* Navigation Buttons */}
+              {/* Navigation Buttons - Fixed Position */}
               <div className="flex justify-between items-center">
                 <Button
                   variant="outline"

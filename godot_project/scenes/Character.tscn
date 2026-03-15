@@ -1,0 +1,27 @@
+[gd_scene load_steps=3 format=3 uid="uid://bqxvnxqjwvxkq"]
+
+[ext_resource type="Script" path="res://scripts/Character.gd" id="1_0k8xr"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1xv7h"]
+radius = 14.0
+
+[node name="Character" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_0k8xr")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_1xv7h")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture_filter = 1
+
+[node name="DirectionIndicator" type="Line2D" parent=""]
+width = 2.0
+default_color = Color(0.862745, 0.980392, 0.996078, 1)
+end_cap_mode = 2
+
+[node name="Glow" type="PointLight2D" parent=""]
+energy = 0.5
+texture_filter = 1
+shadow_enabled = true

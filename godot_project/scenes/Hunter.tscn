@@ -1,0 +1,35 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8n4m2v7kxwqr"]
+
+[ext_resource type="Script" path="res://scripts/Hunter.gd" id="1_h8n7x"]
+
+[node name="Hunter" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_h8n7x")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_1xv7h")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture_filter = 1
+
+[node name="DirectionIndicator" type="Line2D" parent=""]
+width = 2.0
+default_color = Color(0.986275, 0.647059, 0.647059, 1)
+end_cap_mode = 2
+
+[node name="Glow" type="PointLight2D" parent="."]
+energy = 0.8
+color = Color(0.862745, 0.156863, 0.156863, 1)
+texture_filter = 1
+shadow_enabled = true
+
+[node name="Eyes" type="Node2D" parent=""]
+
+[node name="LeftEye" type="Sprite2D" parent="Eyes"]
+position = Vector2(-3.5, 3.5)
+texture_filter = 1
+
+[node name="RightEye" type="Sprite2D" parent="Eyes"]
+position = Vector2(3.5, 3.5)
+texture_filter = 1

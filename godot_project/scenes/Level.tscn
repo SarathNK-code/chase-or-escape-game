@@ -1,0 +1,28 @@
+[gd_scene load_steps=2 format=3 uid="uid://bqxvnxqjwvxkq"]
+
+[ext_resource type="Script" path="res://scripts/Level.gd" id="1_0k8xr"]
+
+[node name="Level" type="Node2D"]
+script = ExtResource("1_0k8xr")
+
+[node name="Walls" type="TileMap" parent="."]
+format = 1
+layer_0/tile_data = PackedInt32Array()
+
+[node name="NavigationRegion2D" type="NavigationRegion2D" parent="."]
+
+[node name="CoinContainer" type="Node2D" parent="."]
+
+[node name="DecoyContainer" type="Node2D" parent="."]
+
+[node name="FootprintContainer" type="Node2D" parent="."]
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -400.0
+offset_top = -300.0
+offset_right = 400.0
+offset_bottom = 300.0
+color = Color(0.0588235, 0.0941176, 0.164706, 1)

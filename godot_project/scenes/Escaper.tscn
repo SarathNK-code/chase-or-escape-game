@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3 uid="uid://dqy2h8vkmxwqr"]
+
+[ext_resource type="Script" path="res://scripts/Escaper.gd" id="1_m8n7x"]
+
+[node name="Escaper" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_m8n7x")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_1xv7h")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture_filter = 1
+
+[node name="DirectionIndicator" type="Line2D" parent=""]
+width = 2.0
+default_color = Color(0.862745, 0.980392, 0.996078, 1)
+end_cap_mode = 2
+
+[node name="Glow" type="PointLight2D" parent="."]
+energy = 0.5
+color = Color(0.231373, 0.603922, 0.992157, 1)
+texture_filter = 1
+shadow_enabled = true

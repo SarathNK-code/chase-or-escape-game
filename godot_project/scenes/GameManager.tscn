@@ -1,0 +1,35 @@
+[gd_scene load_steps=4 format=3 uid="uid://dqy2h8vkmxwqr"]
+
+[ext_resource type="Script" path="res://scripts/GameManager.gd" id="1_m8n7x"]
+[ext_resource type="PackedScene" uid="uid://bqxvnxqjwvxkq" path="res://scenes/Level.tscn" id="2_level"]
+[ext_resource type="PackedScene" uid="uid://c8n4m2v7kxwqr" path="res://scenes/Escaper.tscn" id="3_escaper"]
+[ext_resource type="PackedScene" uid="uid://dqy2h8vkmxwqr" path="res://scenes/Hunter.tscn" id="4_hunter"]
+[ext_resource type="PackedScene" uid="uid://bqxvnxqjwvxkq" path="res://scenes/HUD.tscn" id="5_hud"]
+
+[node name="GameManager" type="Node"]
+script = ExtResource("1_m8n7x")
+
+[node name="Level" parent="." instance=ExtResource("2_level")]
+
+[node name="Escaper" parent="." instance=ExtResource("3_escaper")]
+groups = ["escaper"]
+
+[node name="Hunter" parent="." instance=ExtResource("4_hunter")]
+groups = ["hunter"]
+
+[node name="HUD" parent="." instance=ExtResource("5_hud")]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(400, 300)
+
+[node name="GameTimer" type="Timer" parent="."]
+wait_time = 90.0
+one_shot = true
+
+[node name="RespawnTimer" type="Timer" parent="."]
+wait_time = 5.0
+one_shot = true
+
+[node name="LevelTransitionTimer" type="Timer" parent="."]
+wait_time = 5.0
+one_shot = true

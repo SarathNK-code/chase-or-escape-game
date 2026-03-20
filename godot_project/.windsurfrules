@@ -1,0 +1,177 @@
+# ChaseOrEscape Godot 4 Mobile Game - Project Development Rules
+
+## Core Stack
+- **Engine**: Godot 4.x (latest stable version)
+- **Language**: Type-safe GDScript with static typing enforcement
+- **Target Platform**: Mobile (iOS/Android) with touch-first design
+- **Architecture**: Component-based with scene-script separation
+
+## Coding Standards
+
+### Static Typing Requirements
+- ALL variables must use explicit static typing: `var player_name: String = "Hero"`
+- ALL function parameters must be typed: `func calculate_score(value: int) -> int`
+- ALL function return types must be declared: `func get_player_position() -> Vector2`
+- Use `:` for type inference only when type is obvious from assignment
+
+### Node References
+- Use `@onready` for ALL node references: `@onready var sprite: Sprite2D = $Sprite2D`
+- Never use `get_node()` in `_process()` or performance-critical code
+- Cache node references in `_ready()` whenever possible
+
+### Naming Conventions
+- **Classes/Scenes**: PascalCase: `PlayerController.gd`, `MainMenu.tscn`
+- **Variables/Functions**: snake_case: `player_health`, `calculate_damage()`
+- **Constants**: UPPER_SNAKE_CASE: `MAX_LIVES`, `BASE_SPEED`
+- **Private Members**: Prefix with underscore: `_internal_state`, `_helper_function()`
+- **Signals**: snake_case with past tense: `coin_collected`, `game_ended`
+
+### Code Organization
+- One class per script file
+- Maximum 300 lines per script (split if larger)
+- Use regions for code organization: `#region Movement`, `#endregion`
+- Document public functions with type hints and brief descriptions
+
+## Architecture Rules
+
+### Scene Structure
+- EVERY major entity must have its own .tscn file with corresponding script
+- Scenes must be self-contained with minimal external dependencies
+- Use scene inheritance for common functionality
+- Each scene must have a clear single responsibility
+
+### Folder Structure
+```
+/
+├── scenes/          # All .tscn files
+│   ├── characters/  # Player, enemies, NPCs
+│   ├── ui/          # Menus, HUD, dialogs
+│   ├── levels/      # Game levels, arenas
+│   └── effects/     # Visual effects, particles
+├── scripts/         # All .gd script files
+│   ├── characters/  # Character behaviors
+│   ├── ui/          # UI logic
+│   ├── systems/     # Game systems (inventory, combat)
+│   └── utils/       # Helper utilities
+├── assets/          # All game assets
+│   ├── images/      # Sprites, textures
+│   ├── sounds/      # Audio files
+│   └── fonts/       # Font files
+└── autoload/        # Global singletons
+```
+
+### Component Design
+- Use composition over inheritance
+- Attach scripts directly to scene root nodes
+- Keep scene trees shallow (max 5 levels deep)
+- Use exported variables for inspector configuration
+
+## Mobile Development Rules
+
+### Touch Controls
+- Use `InputEventScreenTouch` for tap detection
+- Use `InputEventScreenDrag` for swipe/drag gestures
+- Implement touch zones with clear visual feedback
+- Support multi-touch where appropriate
+- Minimum touch target: 44x44 pixels
+
+### Performance Optimization
+- Target 60 FPS on mid-range mobile devices
+- Use `VisibilityEnabler2D` for off-screen objects
+- Pool reusable objects (bullets, effects)
+- Optimize draw calls with texture atlases
+- Limit physics calculations to necessary objects
+
+### Screen Adaptation
+- Support multiple aspect ratios (16:9, 18:9, 4:3)
+- Use container-based UI for responsive design
+- Test on both portrait and landscape orientations
+- Scale UI elements based on screen density
+
+### Platform Specifics
+- Use mobile-optimized input mappings
+- Implement proper pause/resume handling
+- Consider battery usage in game loops
+- Test on both iOS and Android targets
+
+## AI Development Protocol
+
+### Plan First Requirement
+- ALWAYS provide high-level technical summary before writing code
+- Include: approach, key functions, data structures, and integration points
+- Wait for explicit approval before implementation
+- No code should be written without prior planning approval
+
+### Feature Implementation Rules
+- Stick strictly to requested design specifications
+- NO "nice-to-have" features or gold-plating
+- Implement minimum viable version first
+- Additional features require separate approval process
+
+### Code Review Process
+1. **Technical Summary**: Provide implementation plan
+2. **Review**: Wait for feedback/approval
+3. **Implementation**: Write code according to approved plan
+4. **Validation**: Ensure code matches specification exactly
+
+### Communication Standards
+- Use clear, concise technical language
+- Provide specific function signatures and data flow
+- Highlight any assumptions or dependencies
+- Estimate complexity and potential risks
+
+## Quality Assurance
+
+### Testing Requirements
+- Test all touch interactions on actual mobile devices
+- Validate performance on target hardware specifications
+- Check memory usage and prevent leaks
+- Test network connectivity (if applicable)
+
+### Code Quality
+- All code must pass Godot's built-in linter
+- No unused variables or functions
+- Proper error handling for external dependencies
+- Consistent formatting and style
+
+### Documentation
+- Update README.md with major changes
+- Document complex algorithms in code comments
+- Maintain change log for version tracking
+- Include setup instructions for new developers
+
+## Security and Best Practices
+
+### Mobile Security
+- Validate all external inputs
+- Secure any stored player data
+- Use appropriate permissions for device features
+- Consider child safety (if applicable)
+
+### Performance Monitoring
+- Profile critical code paths
+- Monitor frame rate consistency
+- Track memory allocation patterns
+- Optimize loading times
+
+## Emergency Protocols
+
+### Bug Fixing Priority
+1. Crash bugs (immediate fix required)
+2. Save data corruption (high priority)
+3. Performance regressions (medium priority)
+4. UI/UX issues (low priority)
+
+### Hotfix Process
+- Create separate branch for emergency fixes
+- Test thoroughly before deployment
+- Document root cause and solution
+- Update regression tests
+
+---
+
+## Enforcement
+
+These rules are mandatory for all development work. Violations must be corrected before code review approval. When in doubt, prioritize consistency and simplicity over clever solutions.
+
+Remember: Plan First, Implement Second, Review Always.

@@ -50,9 +50,7 @@ func _ready():
 	if is_ai_controlled:
 		find_hunter_reference()
 		find_coin_targets()  # Initial coin detection
-		print("Escaper AI: Initial setup complete")
 	else:
-		print("Escaper: Player-controlled mode")
 		find_coin_targets()
 
 func setup_visuals():
@@ -90,35 +88,29 @@ func setup_visuals():
 	# add_child(glow)
 
 func _physics_process(delta):
-	print("Escaper _physics_process called - is_ai_controlled: ", is_ai_controlled, " is_respawning: ", is_respawning)
-	
 	# Handle grace period timer countdown (for invulnerability)
 	if in_grace_period:
 		grace_period_timer -= delta
 		if grace_period_timer <= 0:
 			in_grace_period = false
-			print("Escaper: Grace period ended - vulnerable again")
+			print("Escaper grace period ended - now vulnerable")
 			# Reset visual feedback
 			var sprite = get_node_or_null("Sprite2D")
 			if sprite:
 				sprite.modulate = Color.WHITE
 	
-	# No respawn protection delay - immediate movement allowed
 	# Movement logic (executed immediately after respawn)
 	if is_ai_controlled:
 		# AI mode with intelligent coin collection
-		print("Escaper: AI mode - intelligent coin collection")
 		update_intelligent_ai_behavior(delta)
 	else:
 		# Player-controlled behavior when user controls Escaper
-		print("Escaper: Player mode - checking input")
 		handle_player_input(delta)
 	
-	print("Escaper: Final velocity this frame: ", velocity)
 	move_and_slide()  # Make sure to actually move!
 
 func handle_player_input(delta):
-	# Handle movement input
+	# Handle movement input with collision prevention
 	var input_dir = Vector2.ZERO
 	if Input.is_action_pressed("move_left"):
 		input_dir.x -= 1
@@ -133,9 +125,21 @@ func handle_player_input(delta):
 	if input_dir.length() > 0:
 		input_dir = input_dir.normalized()
 	
-	# Set velocity and move - use same speed as AI for consistency
-	velocity = input_dir * 125.0  # Same as Hunter base speed
-	print("Escaper: Player input direction: ", input_dir, " velocity: ", velocity)
+	# Calculate desired velocity
+	var desired_velocity = input_dir * 125.0  # Same as AI speed
+	
+	# Check for wall collisions before applying movement
+	if input_dir != Vector2.ZERO:
+		var test_pos = global_position + desired_velocity * delta
+		if is_position_safe_from_walls(test_pos):
+			velocity = desired_velocity
+		else:
+			# Try to find safe alternative movement
+			velocity = find_safe_alternative_velocity(input_dir, 125.0)
+			print("Escaper: Player movement blocked, finding alternative")
+	else:
+		velocity = Vector2.ZERO
+	
 	move_and_slide()
 
 func update_intelligent_ai_behavior(delta):
@@ -144,19 +148,13 @@ func update_intelligent_ai_behavior(delta):
 		respawn_timer -= delta
 		if respawn_timer <= 0:
 			is_respawning = false
-			print("Escaper respawn protection ended, AI resuming")
 		return
 	
 	# Intelligent Escaper AI when user controls Hunter
-	print("Escaper AI: Running intelligent behavior")
-	
 	if not hunter_target:
 		find_hunter_reference()
 		if not hunter_target:
-			print("Escaper AI: Hunter target still not found!")
 			return
-		else:
-			print("Escaper AI: Hunter target found at: ", hunter_target.global_position)
 	
 	# Update coin targets more frequently and validate them
 	find_coin_targets()  # Update every frame to ensure fresh targets
@@ -164,7 +162,6 @@ func update_intelligent_ai_behavior(delta):
 	# Calculate hunter threat
 	var hunter_distance = global_position.distance_to(hunter_target.global_position)
 	var hunter_direction = (hunter_target.global_position - global_position).normalized()
-	print("Escaper AI: Hunter distance: ", hunter_distance)
 	
 	# Find best target (coin or escape position)
 	var target_position: Vector2
@@ -178,12 +175,10 @@ func update_intelligent_ai_behavior(delta):
 		if hunter_distance < danger_threshold:
 			# Hunter is close - prioritize escape
 			target_position = global_position - hunter_direction * 200  # Escape direction
-			print("Escaper AI: Escaping from hunter at distance ", hunter_distance)
 		else:
 			# Hunter is far - prioritize coin collection
 			if coin_distance < 100:
 				target_position = best_coin.global_position
-				print("Escaper AI: Collecting coin at distance ", coin_distance)
 			else:
 				# Balance between coin collection and hunter avoidance
 				var escape_weight = 1.0 - (hunter_distance / danger_threshold)
@@ -193,34 +188,92 @@ func update_intelligent_ai_behavior(delta):
 					target_position = global_position - hunter_direction * 150
 				else:
 					target_position = best_coin.global_position
-				
-				print("Escaper AI: Balanced movement - escape weight: ", escape_weight, " coin weight: ", coin_weight)
 	else:
 		# No coins available - move in circle to find coins
 		var time = Time.get_ticks_msec() / 1000.0
 		var angle = time * 0.5
 		target_position = global_position + Vector2(cos(angle), sin(angle)) * 150
-		print("Escaper AI: No coins, searching in circle")
 	
 	# Move toward target with smooth movement
 	move_toward_target(target_position, delta)
-	
-	print("Escaper AI: Current velocity: ", velocity)
 
 func move_toward_target(target_pos: Vector2, delta: float):
 	var direction = (target_pos - global_position).normalized()
 	var desired_velocity = direction * ai_speed
 	
-	# Check if desired movement would hit wall
+	# Enhanced collision detection before moving
 	var test_pos = global_position + desired_velocity * delta
-	if is_position_safe_for_movement(test_pos):
+	if is_position_safe_from_walls(test_pos):
 		velocity = desired_velocity
-		print("Escaper: Free movement toward target - velocity: ", velocity)
 	else:
-		# Hit wall, try to slide but keep moving
-		var slide_velocity = desired_velocity * 0.3  # Much slower but still moving
-		velocity = slide_velocity
-		print("Escaper: Wall collision - sliding: ", velocity)
+		# Hit wall, try to find alternative direction
+		velocity = find_safe_alternative_velocity(direction, ai_speed)
+		print("Escaper: Wall detected, finding alternative path")
+
+func is_position_safe_from_walls(test_pos: Vector2) -> bool:
+	# Enhanced wall detection with better boundaries
+	var margin = 10.0  # Margin for safety
+	
+	# Check map boundaries
+	if test_pos.x < margin or test_pos.x > 800 - margin:
+		return false
+	if test_pos.y < margin or test_pos.y > 600 - margin:
+		return false
+	
+	# Check wall collisions using multiple sample points
+	var sample_points = [
+		test_pos,
+		test_pos + Vector2(margin, 0),
+		test_pos + Vector2(-margin, 0),
+		test_pos + Vector2(0, margin),
+		test_pos + Vector2(0, -margin)
+	]
+	
+	for point in sample_points:
+		if is_wall_at_position(point):
+			return false
+	
+	return true
+
+func is_wall_at_position(position: Vector2) -> bool:
+	# Check if position is in a wall
+	var level = get_tree().get_first_node_in_group("level")
+	if level and level.has_method("get_level_data"):
+		var map_data = level.get_level_data()
+		if not map_data.is_empty():
+			var tile_x = int(position.x / 40.0)
+			var tile_y = int(position.y / 40.0)
+			
+			# Check bounds
+			if tile_x >= 0 and tile_x < map_data[0].size() and tile_y >= 0 and tile_y < map_data.size():
+				return map_data[tile_y][tile_x] == 1
+	
+	return false
+
+func find_safe_alternative_velocity(desired_direction: Vector2, speed: float) -> Vector2:
+	# Try multiple alternative directions to find safe movement
+	var alternatives = []
+	
+	# Try perpendicular directions first
+	alternatives.append(Vector2(-desired_direction.y, desired_direction.x).normalized() * speed * 0.8)
+	alternatives.append(Vector2(desired_direction.y, -desired_direction.x).normalized() * speed * 0.8)
+	
+	# Try diagonal alternatives
+	alternatives.append(Vector2(desired_direction.x + desired_direction.y, desired_direction.y - desired_direction.x).normalized() * speed * 0.7)
+	alternatives.append(Vector2(desired_direction.x - desired_direction.y, desired_direction.y + desired_direction.x).normalized() * speed * 0.7)
+	
+	# Try reverse direction as last resort
+	alternatives.append(-desired_direction.normalized() * speed * 0.5)
+	
+	# Test each alternative
+	for alt_vel in alternatives:
+		var test_pos = global_position + alt_vel * get_physics_process_delta_time()
+		if is_position_safe_from_walls(test_pos):
+			return alt_vel
+	
+	# If no safe alternative found, stop
+	print("Escaper: No safe movement direction found, stopping")
+	return Vector2.ZERO
 
 func move_along_path(delta):
 	print("Escaper: move_along_path called - path size: ", current_path.size(), " path_index: ", path_index)
@@ -312,30 +365,22 @@ func _process(delta):
 
 func check_ai_control_status():
 	# Check if user selected Hunter (this Escaper should be AI-controlled)
-	print("Escaper: Checking AI control status...")
 	var game_settings = get_node_or_null("/root/GameSettings")
-	print("Escaper: GameSettings node: ", game_settings)
 	
 	if game_settings:
 		var player_character = game_settings.get("player_character")
-		print("Escaper: Retrieved player_character: ", player_character)
 		if player_character == null:
 			player_character = "escaper"  # Default fallback
 		is_ai_controlled = (player_character == "hunter")
-		print("Escaper AI control status: ", is_ai_controlled, " (player chose: ", player_character, ")")
 	else:
 		# Fallback: check global or use default
 		is_ai_controlled = false
-		print("Escaper AI: GameSettings not found, using player control")
 
 func find_hunter_reference():
 	# Find the Hunter node
 	var hunters = get_tree().get_nodes_in_group("hunter")
 	if hunters.size() > 0:
 		hunter_target = hunters[0]
-		print("Escaper AI: Found hunter reference")
-	else:
-		print("Escaper AI: Hunter not found")
 
 func find_coin_targets():
 	# Find all coins in the scene and filter out collected ones
@@ -344,7 +389,6 @@ func find_coin_targets():
 	for coin in coins:
 		if coin and coin.is_inside_tree() and is_coin_valid(coin):
 			coin_targets.append(coin)
-	print("Escaper AI: Found ", coin_targets.size(), " valid coin targets")
 
 func is_coin_valid(coin: Node2D) -> bool:
 	# Check if coin is still valid (not collected and visible)
@@ -535,7 +579,7 @@ func lose_life():
 		print("Life lost. Lives remaining: ", lives)
 
 func respawn(new_position: Vector2):
-	print("Escaper respawn called at position: ", new_position)
+	print("Escaper respawn function called at: ", new_position)
 	
 	# Instant respawn - no protection delay, just immediate grace period
 	is_respawning = false  # Don't block movement
@@ -543,7 +587,10 @@ func respawn(new_position: Vector2):
 	
 	# Force position update immediately
 	global_position = new_position
+	print("Escaper position set to: ", global_position)
+	
 	velocity = Vector2.ZERO
+	print("Escaper velocity reset to zero")
 	
 	# Clear AI state to prevent interference
 	current_path.clear()
@@ -551,10 +598,13 @@ func respawn(new_position: Vector2):
 	escape_direction = Vector2.ZERO
 	last_target_position = Vector2.ZERO
 	
-	# Start grace period immediately for protection
-	start_grace_period(8.0)  # 8 second grace period for instant protection
+	# Reset any stuck detection
+	stuck_timer = 0.0
+	reroute_attempts = 0
 	
-	print("Escaper INSTANT respawn completed - position: ", global_position, " grace period started")
+	# Start grace period AFTER position is set - this is the protection
+	start_grace_period(8.0)  # 8 second grace period for instant protection
+	print("Escaper grace period started (8 seconds) - NOW PROTECTED")
 
 func start_grace_period(duration: float):
 	grace_period_timer = duration

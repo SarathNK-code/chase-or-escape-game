@@ -52,8 +52,8 @@ func setup_visuals():
 	
 	var gradient_texture = GradientTexture2D.new()
 	gradient_texture.gradient = gradient
-	gradient_texture.width = 32
-	gradient_texture.height = 32
+	gradient_texture.width = 20  # Same as Escaper
+	gradient_texture.height = 20  # Same as Escaper
 	
 	sprite.texture = gradient_texture
 	
@@ -338,7 +338,7 @@ func is_blocked_by_walls() -> bool:
 	return false
 
 func is_wall_at(position: Vector2) -> bool:
-	# Check if map data is valid
+	# More accurate wall detection with better bounds checking
 	if current_map.is_empty() or current_map.size() == 0:
 		return false
 	
@@ -347,11 +347,13 @@ func is_wall_at(position: Vector2) -> bool:
 		int(position.y / 40.0)
 	)
 	
+	# More precise bounds checking
 	if tile_pos.x < 0 or tile_pos.x >= current_map[0].size():
-		return true
+		return false
 	if tile_pos.y < 0 or tile_pos.y >= current_map.size():
-		return true
+		return false
 	
+	# Only return true if it's actually a wall (value == 1)
 	return current_map[tile_pos.y][tile_pos.x] == 1
 
 func calculate_path_distance(start: Vector2, end: Vector2) -> float:
@@ -382,6 +384,12 @@ func calculate_path_distance(start: Vector2, end: Vector2) -> float:
 	return start.distance_to(end)
 
 func _physics_process(delta):
+	# Check if movement is stopped
+	if current_target == null and current_path.is_empty():
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
+	
 	if is_controlled_by_player:
 		# Player-controlled movement when user selects Hunter
 		handle_player_input(delta)
@@ -393,7 +401,7 @@ func _physics_process(delta):
 	move_and_slide()
 
 func handle_player_input(delta):
-	# Handle movement input for player-controlled Hunter
+	# Handle movement input for player-controlled Hunter with collision prevention
 	var input_dir = Vector2.ZERO
 	if Input.is_action_pressed("move_left"):
 		input_dir.x -= 1
@@ -408,35 +416,136 @@ func handle_player_input(delta):
 	if input_dir.length() > 0:
 		input_dir = input_dir.normalized()
 	
-	# Set velocity and move
-	velocity = input_dir * speed
+	# Calculate desired velocity
+	var desired_velocity = input_dir * speed
+	
+	# Check for wall collisions before applying movement
+	if input_dir != Vector2.ZERO:
+		var test_pos = global_position + desired_velocity * delta
+		if is_position_safe_from_walls(test_pos):
+			velocity = desired_velocity
+		else:
+			# Try to find safe alternative movement
+			velocity = find_safe_alternative_velocity(input_dir, speed)
+			print("Hunter: Player movement blocked, finding alternative")
+	else:
+		velocity = Vector2.ZERO
+	
 	print("Hunter: Player input direction: ", input_dir)
 
 func handle_ai_movement(delta):
-	# Enhanced AI movement along calculated path
+	# Enhanced AI movement along calculated path with better collision handling
 	if current_path.size() > 0 and path_index < current_path.size():
 		# Move along path
 		target_position = current_path[path_index]
 		var direction = (target_position - global_position).normalized()
-		velocity = direction * speed
+		var desired_velocity = direction * speed
+		
+		# Check for wall collisions before moving
+		var test_pos = global_position + desired_velocity * delta
+		if is_position_safe_from_walls(test_pos):
+			velocity = desired_velocity
+		else:
+			# Hit wall, try to find alternative direction
+			velocity = find_safe_alternative_velocity(direction, speed)
+			print("Hunter: Wall detected, finding alternative path")
 		
 		# Check if reached current waypoint
-		if global_position.distance_to(target_position) < 10.0:
+		if global_position.distance_to(target_position) < 15.0:  # Increased threshold for better waypoint detection
 			path_index += 1
 			if path_index >= current_path.size():
 				# Reached end of path, recalculate
 				if current_target:
 					calculate_path_to_target(current_target.global_position)
 	elif current_target:
-		# No path or path completed, move directly to target
+		# No path or path completed, move directly to target with collision avoidance
 		var direction = (current_target.global_position - global_position).normalized()
-		velocity = direction * speed
+		var desired_velocity = direction * speed
+		
+		# Check for wall collisions before moving
+		var test_pos = global_position + desired_velocity * delta
+		if is_position_safe_from_walls(test_pos):
+			velocity = desired_velocity
+		else:
+			# Hit wall, try to find alternative direction
+			velocity = find_safe_alternative_velocity(direction, speed)
+			print("Hunter: Direct movement blocked, finding alternative")
 	else:
 		# No target, slow down
 		velocity = velocity.move_toward(Vector2.ZERO, speed * delta)
 	
 	# Store last position for stuck detection
 	last_position = global_position
+
+func is_position_safe_from_walls(test_pos: Vector2) -> bool:
+	# More accurate wall detection with reduced margin to prevent false positives
+	var margin = 8.0  # Reduced from 15.0 to prevent false positives
+	
+	# Check map boundaries with reasonable safe area
+	if test_pos.x < margin or test_pos.x > 800 - margin:
+		return false
+	if test_pos.y < margin or test_pos.y > 600 - margin:
+		return false
+	
+	# Simplified wall collision detection with fewer sample points
+	var sample_points = [
+		test_pos,
+		# Cardinal directions with reasonable margin
+		test_pos + Vector2(margin, 0),
+		test_pos + Vector2(-margin, 0),
+		test_pos + Vector2(0, margin),
+		test_pos + Vector2(0, -margin)
+	]
+	
+	# Check each sample point
+	for point in sample_points:
+		if is_wall_at(point):
+			return false
+	
+	# Remove the overly aggressive future position check that was causing false positives
+	return true
+
+func find_safe_alternative_velocity(desired_direction: Vector2, speed: float) -> Vector2:
+	# Simplified alternative velocity finding to prevent unnecessary path changes
+	var alternatives = []
+	
+	# Try perpendicular directions first
+	alternatives.append(Vector2(-desired_direction.y, desired_direction.x).normalized() * speed * 0.9)
+	alternatives.append(Vector2(desired_direction.y, -desired_direction.x).normalized() * speed * 0.9)
+	
+	# Try slight variations of original direction
+	alternatives.append(desired_direction.normalized() * speed * 0.7)
+	
+	# Try diagonal alternatives
+	alternatives.append(Vector2(desired_direction.x + desired_direction.y, desired_direction.y - desired_direction.x).normalized() * speed * 0.6)
+	alternatives.append(Vector2(desired_direction.x - desired_direction.y, desired_direction.y + desired_direction.x).normalized() * speed * 0.6)
+	
+	# Test each alternative
+	for alt_vel in alternatives:
+		var test_pos = global_position + alt_vel * get_physics_process_delta_time()
+		if is_position_safe_from_walls(test_pos):
+			return alt_vel
+	
+	# If no safe alternative found, try to find nearest open space
+	return find_nearest_open_space_velocity(speed)
+
+func find_nearest_open_space_velocity(speed: float) -> Vector2:
+	# Find the nearest open space when completely stuck
+	var max_distance = 60.0
+	var step = 15.0
+	
+	for distance in range(step, int(max_distance), step):
+		for angle in range(0, 360, 45):
+			var rad = deg_to_rad(angle)
+			var check_pos = global_position + Vector2(cos(rad), sin(rad)) * distance
+			if is_position_safe_from_walls(check_pos):
+				var direction = (check_pos - global_position).normalized()
+				return direction * speed * 0.5
+	
+	# Ultimate fallback: try to move toward center of map
+	var center = Vector2(400, 300)
+	var to_center = (center - global_position).normalized()
+	return to_center * speed * 0.3
 	
 	
 func set_target(target: Node2D):
@@ -481,3 +590,12 @@ func check_ai_control_status():
 		# Fallback: use AI control by default
 		is_controlled_by_player = false
 		print("Hunter AI: GameSettings not found, using AI control")
+
+func stop_movement():
+	# Stop all movement and AI processing
+	velocity = Vector2.ZERO
+	current_target = null
+	current_path.clear()
+	path_index = 0
+	target_position = global_position
+	print("Hunter movement stopped")

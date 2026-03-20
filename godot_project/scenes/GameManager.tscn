@@ -1,10 +1,10 @@
 [gd_scene load_steps=4 format=3 uid="uid://dqy2h8vkmxwqr"]
 
 [ext_resource type="Script" path="res://scripts/GameManager.gd" id="1_m8n7x"]
-[ext_resource type="PackedScene" uid="uid://bqxvnxqjwvxkq" path="res://scenes/Level.tscn" id="2_level"]
-[ext_resource type="PackedScene" uid="uid://c8n4m2v7kxwqr" path="res://scenes/Escaper.tscn" id="3_escaper"]
-[ext_resource type="PackedScene" uid="uid://dqy2h8vkmxwqr" path="res://scenes/Hunter.tscn" id="4_hunter"]
-[ext_resource type="PackedScene" uid="uid://bqxvnxqjwvxkq" path="res://scenes/HUD.tscn" id="5_hud"]
+[ext_resource type="PackedScene" path="res://scenes/Level.tscn" id="2_level"]
+[ext_resource type="PackedScene" path="res://scenes/Escaper.tscn" id="3_escaper"]
+[ext_resource type="PackedScene" path="res://scenes/Hunter.tscn" id="4_hunter"]
+[ext_resource type="PackedScene" path="res://scenes/HUD.tscn" id="5_hud"]
 
 [node name="GameManager" type="Node"]
 script = ExtResource("1_m8n7x")

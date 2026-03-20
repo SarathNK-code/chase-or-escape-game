@@ -1,5 +1,4 @@
 extends Area2D
-class_name Coin
 
 signal collected(value: int, is_bonus: bool)
 
@@ -9,7 +8,7 @@ signal collected(value: int, is_bonus: bool)
 @export var pulse_speed: float = 0.006
 @export var rotation_speed: float = 2.0
 
-var collected: bool = false
+var is_collected: bool = false
 var original_scale: Vector2
 var pulse_time: float = 0.0
 var rotation_angle: float = 0.0
@@ -17,7 +16,9 @@ var rotation_angle: float = 0.0
 func _ready():
 	original_scale = scale
 	setup_visuals()
-	$AnimationPlayer.animation_finished.connect(_on_animation_finished)
+	
+	# Connect body entered signal
+	body_entered.connect(_on_body_entered)
 
 func setup_visuals():
 	# Create gradient texture for coin
@@ -36,15 +37,18 @@ func setup_visuals():
 	gradient_texture.width = 16
 	gradient_texture.height = 16
 	
-	$Sprite2D.texture = gradient_texture
+	if has_node("Sprite2D"):
+		$Sprite2D.texture = gradient_texture
 	
 	if is_bonus:
-		$BonusIndicator.visible = true
-		$Glow.energy = 0.6
-		$Glow.color = Color("#fbbf24")
+		if has_node("BonusIndicator"):
+			$BonusIndicator.visible = true
+		if has_node("Glow"):
+			$Glow.energy = 0.6
+			$Glow.color = Color("#fbbf24")
 
 func _process(delta):
-	if collected:
+	if is_collected:
 		return
 	
 	pulse_time += delta
@@ -54,7 +58,8 @@ func _process(delta):
 	if is_bonus:
 		var pulse = sin(pulse_time * pulse_speed * 100) * 0.3 + 0.7
 		scale = original_scale * (1.0 + pulse * 0.3)
-		$Glow.energy = 0.3 + pulse * 0.15
+		if has_node("Glow"):
+			$Glow.energy = 0.3 + pulse * 0.15
 	
 	# Rotation
 	rotation = rotation_angle
@@ -64,10 +69,10 @@ func set_bonus(bonus: bool):
 	setup_visuals()
 
 func collect():
-	if collected:
+	if is_collected:
 		return
 	
-	collected = true
+	is_collected = true
 	var value = bonus_value if is_bonus else regular_value
 	collected.emit(value, is_bonus)
 	
@@ -90,39 +95,33 @@ func play_regular_collection():
 
 func play_bonus_explosion():
 	# Explosion effect for bonus coins
-	$ExplosionEffect.visible = true
-	$Sprite2D.visible = false
-	$BonusIndicator.visible = false
-	
-	var tween = create_tween()
-	tween.set_parallel(true)
-	
-	# Expand explosion ring
-	for i in range(3):
-		var ring = $ExplosionEffect.duplicate()
-		add_child(ring)
-		ring.visible = true
-		tween.tween_property(ring, "scale", Vector2(3.0, 3.0), 0.6)
-		tween.tween_property(ring, "modulate:a", 0.0, 0.6)
-	
-	# Fade out main coin
-	tween.tween_property(self, "modulate:a", 0.0, 0.6)
-	tween.tween_callback(queue_free)
+	if has_node("ExplosionEffect"):
+		$ExplosionEffect.visible = true
+		$Sprite2D.visible = false
+		if has_node("BonusIndicator"):
+			$BonusIndicator.visible = false
+		
+		var tween = create_tween()
+		tween.set_parallel(true)
+		
+		# Expand explosion ring
+		for i in range(3):
+			var ring = $ExplosionEffect.duplicate()
+			add_child(ring)
+			ring.visible = true
+			tween.tween_property(ring, "scale", Vector2(3.0, 3.0), 0.6)
+			tween.tween_property(ring, "modulate:a", 0.0, 0.6)
+		
+		# Fade out main coin
+		tween.tween_property(self, "modulate:a", 0.0, 0.6)
+		tween.tween_callback(queue_free)
 
-func _on_animation_finished(anim_name):
-	if anim_name == "collect":
-		queue_free()
-
-func _on_body_entered(body):
-	if body is Escaper and not collected:
-		collect()
-
-func get_value() -> int:
+func get_coin_value() -> int:
 	return bonus_value if is_bonus else regular_value
 
-func get_collection_data() -> Dictionary:
-	return {
-		"value": get_value(),
-		"is_bonus": is_bonus,
-		"position": global_position
-	}
+func get_collected() -> bool:
+	return is_collected
+
+func _on_body_entered(body):
+	if body.is_in_group("escaper") and not is_collected:
+		collect()

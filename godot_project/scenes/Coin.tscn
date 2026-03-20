@@ -25,7 +25,6 @@ shadow_enabled = true
 [node name="BonusIndicator" type="Label" parent="."]
 visible = false
 text = "★"
-label_settings = SubResource("LabelSettings_1xv7h")
 horizontal_alignment = 1
 vertical_alignment = 1
 

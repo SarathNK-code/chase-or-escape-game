@@ -1,5 +1,4 @@
 extends CharacterBody2D
-class_name Character
 
 signal coin_collected(value: int, is_bonus: bool)
 signal life_lost()

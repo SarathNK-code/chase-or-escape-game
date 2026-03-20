@@ -1,7 +1,6 @@
 extends Area2D
-class_name Decoy
 
-signal expired(decoy: Decoy)
+signal expired(decoy)
 
 @export var lifespan: float = 5.0  # 5 seconds
 @export var distract_distance: float = 200.0
@@ -103,11 +102,11 @@ func is_hunter_in_range(hunter_position: Vector2) -> bool:
 	return distance <= distract_distance
 
 func _on_body_entered(body):
-	if body is Hunter:
+	# Check if body is hunter by checking if it's in the hunter group
+	if body.is_in_group("hunter"):
 		# Hunter touched decoy - apply distraction effect
-		var hunter = body as Hunter
-		if hunter.has_method("apply_distraction"):
-			hunter.apply_distraction(self)
+		if body.has_method("apply_distraction"):
+			body.apply_distraction(self)
 
 func get_decoy_data() -> Dictionary:
 	return {

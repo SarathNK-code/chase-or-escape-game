@@ -6,8 +6,6 @@
 script = ExtResource("1_0k8xr")
 
 [node name="Walls" type="TileMap" parent="."]
-format = 1
-layer_0/tile_data = PackedInt32Array()
 
 [node name="NavigationRegion2D" type="NavigationRegion2D" parent="."]
 

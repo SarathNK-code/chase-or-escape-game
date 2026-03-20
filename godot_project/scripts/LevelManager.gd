@@ -1,5 +1,4 @@
 extends Node
-class_name LevelManager
 
 signal level_loaded(level_number: int, map_data: Array)
 signal all_levels_completed()
@@ -13,7 +12,7 @@ var total_levels: int = 5
 var current_map_data: Array = []
 
 # Map layouts (1 = wall, 0 = empty)
-var LEVEL_MAPS: Array[Array] = [
+var LEVEL_MAPS: Array = [
 	# Level 1 - Original balanced map
 	[
 		[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
